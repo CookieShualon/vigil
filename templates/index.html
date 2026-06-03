@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Vigil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #181818;
+    --border: #222222;
+    --text: #e8e8e8;
+    --muted: #666666;
+    --accent: #c8ff00;
+    --running: #3b82f6;
+    --done: #22c55e;
+    --failed: #ef4444;
+    --queue: #888888;
+  }
+
+  html, body { height: 100%; overflow: hidden; }
+
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    font-size: 13px;
+  }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 16px;
+    gap: 24px;
+  }
+
+  #sidebar h1 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+  }
+
+  .sidebar-section { display: flex; flex-direction: column; gap: 8px; }
+  .sidebar-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+
+  select, input[type=range] {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    width: 100%;
+    cursor: pointer;
+  }
+  select:focus { outline: 1px solid var(--accent); }
+
+  .range-row { display: flex; align-items: center; gap: 8px; }
+  .range-row input { flex: 1; accent-color: var(--accent); }
+  .range-val { font-size: 12px; color: var(--accent); min-width: 24px; text-align: right; }
+
+  #btn-new {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 9px 12px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+    letter-spacing: 0.03em;
+    transition: opacity 0.15s;
+  }
+  #btn-new:hover { opacity: 0.85; }
+
+  /* ── Main ── */
+  #main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #board {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    overflow: hidden;
+  }
+
+  .column {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .column:last-child { border-right: none; }
+
+  .col-header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .col-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }
+  .col-count {
+    font-size: 10px;
+    color: var(--muted);
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 1px 6px;
+    min-width: 20px;
+    text-align: center;
+  }
+
+  .col-queue   .col-title { color: var(--queue); }
+  .col-running .col-title { color: var(--running); }
+  .col-done    .col-title { color: var(--done); }
+  .col-failed  .col-title { color: var(--failed); }
+
+  .col-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .col-body::-webkit-scrollbar { width: 4px; }
+  .col-body::-webkit-scrollbar-track { background: transparent; }
+  .col-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s, opacity 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .card:hover { border-color: #444; }
+  .card.dragging { opacity: 0.4; }
+  .card.drop-target { border-color: var(--accent); }
+
+  .card-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 3px;
+  }
+  .dot-queue   { background: var(--queue); }
+  .dot-running { background: var(--running); animation: pulse 1.4s ease-in-out infinite; }
+  .dot-done    { background: var(--done); }
+  .dot-failed  { background: var(--failed); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .card-desc {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .card-model { font-size: 10px; color: var(--muted); }
+  .card-steps { font-size: 10px; color: var(--accent); }
+
+  .card-log {
+    font-size: 10px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-top: 1px solid var(--border);
+    padding-top: 6px;
+    margin-top: 2px;
+  }
+  .card-log.has-log { color: #aaa; }
+
+  .card-elapsed {
+    font-size: 10px;
+    color: var(--muted);
+    position: absolute;
+    bottom: 8px;
+    right: 10px;
+  }
+
+  /* ── Modal ── */
+  #modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  #modal-overlay.open { display: flex; }
+
+  #modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  #modal h2 { font-size: 14px; font-weight: 700; }
+
+  #modal textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 10px;
+    border-radius: 4px;
+    resize: vertical;
+    min-height: 80px;
+    width: 100%;
+  }
+  #modal textarea:focus { outline: 1px solid var(--accent); }
+
+  .modal-row { display: flex; gap: 12px; }
+  .modal-field { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .modal-field label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+  .btn-cancel {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .btn-cancel:hover { border-color: #555; color: var(--text); }
+
+  .btn-submit {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .btn-submit:hover { opacity: 0.85; }
+
+  /* ── Detail Panel ── */
+  #detail-panel {
+    position: fixed;
+    top: 0; right: -480px;
+    width: 480px; height: 100%;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    transition: right 0.25s ease;
+    overflow: hidden;
+  }
+  #detail-panel.open { right: 0; }
+
+  #detail-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  #detail-close {
+    background: none; border: none; color: var(--muted);
+    font-size: 18px; cursor: pointer; padding: 0; line-height: 1;
+    margin-left: auto;
+  }
+  #detail-close:hover { color: var(--text); }
+  #detail-title { font-size: 13px; font-weight: 700; flex: 1; }
+
+  #detail-body { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
+  #detail-body::-webkit-scrollbar { width: 4px; }
+  #detail-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .detail-section-label {
+    font-size: 10px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+
+  #detail-desc {
+    font-size: 12px; line-height: 1.6; color: var(--text);
+    background: var(--surface2); border-radius: 4px; padding: 10px;
+  }
+
+
+
+  #detail-history {
+    display: flex; flex-direction: column; gap: 4px;
+    max-height: 300px; overflow-y: auto;
+  }
+  #detail-history::-webkit-scrollbar { width: 4px; }
+  #detail-history::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .history-row {
+    font-size: 11px; color: var(--muted); padding: 4px 8px;
+    background: var(--surface2); border-radius: 3px;
+    display: flex; gap: 8px;
+  }
+  .history-time { color: var(--accent); flex-shrink: 0; }
+  .history-action { color: #aaa; flex: 1; word-break: break-all; }
+
+  #detail-error {
+    font-size: 12px; color: var(--failed);
+    background: rgba(239,68,68,0.08); border-radius: 4px;
+    padding: 10px; border: 1px solid rgba(239,68,68,0.2);
+    display: none;
+  }
+
+  #detail-actions {
+    display: flex; gap: 10px;
+    padding: 14px 20px; border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .btn-stop {
+    background: rgba(239,68,68,0.15); color: var(--failed);
+    border: 1px solid rgba(239,68,68,0.3);
+    font-family: inherit; font-size: 12px; font-weight: 700;
+    padding: 8px 16px; border-radius: 4px; cursor: pointer;
+  }
+  .btn-stop:hover { background: rgba(239,68,68,0.25); }
+
+  .btn-retry {
+    background: rgba(200,255,0,0.1); color: var(--accent);
+    border: 1px solid rgba(200,255,0,0.3);
+    font-family: inherit; font-size: 12px; font-weight: 700;
+    padding: 8px 16px; border-radius: 4px; cursor: pointer;
+  }
+  .btn-retry:hover { background: rgba(200,255,0,0.2); }
+
+  .empty-col {
+    font-size: 11px; color: var(--border); text-align: center; padding-top: 30px;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside id="sidebar">
+  <h1>Vigil</h1>
+
+  <div class="sidebar-section">
+    <span class="sidebar-label">Model</span>
+    <select id="model-select">
+      <option value="grok-4-3">grok-4-3</option>
+      <option value="gemini-3-5-flash">gemini-3-5-flash</option>
+      <option value="claude-opus-45">claude-opus-45</option>
+      <option value="qwen3-coder-480b">qwen3-coder-480b</option>
+    </select>
+  </div>
+
+  <div class="sidebar-section">
+    <span class="sidebar-label">Max Steps</span>
+    <div class="range-row">
+      <input type="range" id="max-steps" min="5" max="50" value="20" />
+      <span class="range-val" id="max-steps-val">20</span>
+    </div>
+  </div>
+
+  <button id="btn-new">+ New Task</button>
+</aside>
+
+<!-- Main Board -->
+<main id="main">
+  <div id="board">
+    <div class="column col-queue" data-status="queue" id="col-queue">
+      <div class="col-header">
+        <span class="col-title">Queue</span>
+        <span class="col-count" id="count-queue">0</span>
+      </div>
+      <div class="col-body" id="body-queue"></div>
+    </div>
+    <div class="column col-running" data-status="running" id="col-running">
+      <div class="col-header">
+        <span class="col-title">Running</span>
+        <span class="col-count" id="count-running">0</span>
+      </div>
+      <div class="col-body" id="body-running"></div>
+    </div>
+    <div class="column col-done" data-status="done" id="col-done">
+      <div class="col-header">
+        <span class="col-title">Done</span>
+        <span class="col-count" id="count-done">0</span>
+      </div>
+      <div class="col-body" id="body-done"></div>
+    </div>
+    <div class="column col-failed" data-status="failed" id="col-failed">
+      <div class="col-header">
+        <span class="col-title">Failed</span>
+        <span class="col-count" id="count-failed">0</span>
+      </div>
+      <div class="col-body" id="body-failed"></div>
+    </div>
+  </div>
+</main>
+
+<!-- New Task Modal -->
+<div id="modal-overlay">
+  <div id="modal">
+    <h2>New Task</h2>
+    <textarea id="task-input" placeholder="Describe what the browser should do…" autofocus></textarea>
+    <div class="modal-row">
+      <div class="modal-field">
+        <label>Model</label>
+        <select id="modal-model">
+          <option value="grok-4-3">grok-4-3</option>
+          <option value="gemini-3-5-flash">gemini-3-5-flash</option>
+          <option value="claude-opus-45">claude-opus-45</option>
+          <option value="qwen3-coder-480b">qwen3-coder-480b</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>Max Steps</label>
+        <select id="modal-steps">
+          <option value="10">10</option>
+          <option value="20" selected>20</option>
+          <option value="30">30</option>
+          <option value="50">50</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btn-cancel">Cancel</button>
+      <button class="btn-submit" id="btn-submit">Run Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Panel -->
+<div id="detail-panel">
+  <div id="detail-header">
+    <span id="detail-title">Task Detail</span>
+    <button id="detail-close">✕</button>
+  </div>
+  <div id="detail-body">
+    <div>
+      <div class="detail-section-label">Task</div>
+      <div id="detail-desc"></div>
+    </div>
+    <div id="live-browser">
+      <div class="detail-section-label">Live Browser</div>
+      <div style="border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--bg);">
+        <img id="live-screenshot"
+             src=""
+             alt="browser view"
+             style="width: 100%; display: none; object-fit: contain;"
+        />
+        <p id="no-screenshot" style="text-align: center; color: #444; font-size: 12px; padding: 40px;">
+          waiting for screenshot...
+        </p>
+      </div>
+    </div>
+    <div>
+      <div class="detail-section-label">Action History</div>
+      <div id="detail-history"></div>
+    </div>
+    <div id="detail-error"></div>
+  </div>
+  <div id="detail-actions">
+    <button class="btn-stop" id="btn-stop">Stop</button>
+    <button class="btn-retry" id="btn-retry">Retry</button>
+  </div>
+</div>
+
+<script>
+const socket = io();
+
+// ── State ──────────────────────────────────────────────────
+const taskMap = {};   // id -> task object
+let activeTaskId = null;
+let elapsedTimers = {};  // id -> setInterval handle
+
+// ── Socket events ──────────────────────────────────────────
+socket.on('connect', () => {
+  socket.emit('get_all_tasks');
+});
+
+socket.on('all_tasks', (tasks) => {
+  tasks.forEach(t => applyTask(t));
+  updateCounts();
+});
+
+socket.on('task_update', (task) => {
+  applyTask(task);
+  updateCounts();
+  if (activeTaskId === task.id) renderDetail(task);
+});
+
+socket.on('screenshot_update', (data) => {
+  if (activeTaskId === data.id) {
+    const img = document.getElementById('live-screenshot');
+    const placeholder = document.getElementById('no-screenshot');
+    img.src = 'data:image/png;base64,' + data.screenshot;
+    img.style.display = 'block';
+    placeholder.style.display = 'none';
+  }
+});
+
+// ── Task state management ──────────────────────────────────
+function applyTask(task) {
+  const existing = taskMap[task.id];
+  taskMap[task.id] = task;
+
+  // Move card if status changed or create new
+  const card = document.getElementById('card-' + task.id);
+  if (card) {
+    // Update in place if same column
+    const col = card.closest('.col-body');
+    if (col && col.id === 'body-' + task.status) {
+      updateCard(card, task);
+      return;
+    }
+    card.remove();
+  }
+
+  // Stop old timer if status changed away from running
+  if (task.status !== 'running') stopTimer(task.id);
+
+  const newCard = buildCard(task);
+  const body = document.getElementById('body-' + task.status);
+  if (body) {
+    const empty = body.querySelector('.empty-col');
+    if (empty) empty.remove();
+    body.prepend(newCard);
+  }
+
+  if (task.status === 'running') startTimer(task.id);
+  updateCounts();
+}
+
+// ── Card building ──────────────────────────────────────────
+function buildCard(task) {
+  const div = document.createElement('div');
+  div.className = 'card';
+  div.id = 'card-' + task.id;
+  div.innerHTML = cardHTML(task);
+  div.addEventListener('click', () => openDetail(task.id));
+  setupDrag(div, task);
+  return div;
+}
+
+function updateCard(card, task) {
+  card.innerHTML = cardHTML(task);
+  card.onclick = () => openDetail(task.id);
+  setupDrag(card, task);
+  if (task.status === 'running') startTimer(task.id);
+  else stopTimer(task.id);
+}
+
+function cardHTML(task) {
+  const lastStep = task.steps && task.steps.length > 0 ? task.steps[task.steps.length - 1] : null;
+  const logText = lastStep
+    ? '→ ' + JSON.stringify(lastStep.action).slice(0, 80)
+    : 'waiting…';
+  const elapsed = task.elapsed ? task.elapsed + 's' : '';
+  const stepLabel = task.status === 'running' || task.status === 'done'
+    ? `step ${task.step} / ${task.total_steps}`
+    : '';
+
+  return `
+    <div class="card-top">
+      <span class="status-dot dot-${task.status}"></span>
+      <span class="card-desc">${escHtml(task.description)}</span>
+    </div>
+    <div class="card-meta">
+      <span class="card-model">${escHtml(task.model)}</span>
+      <span class="card-steps">${stepLabel}</span>
+    </div>
+    <div class="card-log ${lastStep ? 'has-log' : ''}">${escHtml(logText)}</div>
+    <span class="card-elapsed" id="elapsed-${task.id}">${elapsed}</span>
+  `;
+}
+
+// ── Elapsed timers ─────────────────────────────────────────
+function startTimer(id) {
+  if (elapsedTimers[id]) return;
+  const task = taskMap[id];
+  if (!task || !task.started_at) return;
+  elapsedTimers[id] = setInterval(() => {
+    const el = document.getElementById('elapsed-' + id);
+    if (el) {
+      const now = Date.now() / 1000;
+      el.textContent = Math.round(now - task.started_at) + 's';
+    }
+  }, 1000);
+}
+
+function stopTimer(id) {
+  if (elapsedTimers[id]) {
+    clearInterval(elapsedTimers[id]);
+    delete elapsedTimers[id];
+  }
+}
+
+// ── Column counts ──────────────────────────────────────────
+function updateCounts() {
+  ['queue', 'running', 'done', 'failed'].forEach(s => {
+    const count = Object.values(taskMap).filter(t => t.status === s).length;
+    document.getElementById('count-' + s).textContent = count;
+
+    const body = document.getElementById('body-' + s);
+    const cards = body.querySelectorAll('.card');
+    if (cards.length === 0 && !body.querySelector('.empty-col')) {
+      const e = document.createElement('div');
+      e.className = 'empty-col';
+      e.textContent = 'empty';
+      body.appendChild(e);
+    } else if (cards.length > 0) {
+      const e = body.querySelector('.empty-col');
+      if (e) e.remove();
+    }
+  });
+}
+
+// ── Drag & Drop (Queue ↔ Failed re-queue) ─────────────────
+let dragId = null;
+
+function setupDrag(card, task) {
+  if (task.status !== 'queue' && task.status !== 'failed') {
+    card.draggable = false;
+    return;
+  }
+  card.draggable = true;
+  card.addEventListener('dragstart', e => {
+    dragId = task.id;
+    setTimeout(() => card.classList.add('dragging'), 0);
+  });
+  card.addEventListener('dragend', () => {
+    card.classList.remove('dragging');
+    dragId = null;
+  });
+}
+
+document.querySelectorAll('.col-body').forEach(col => {
+  col.addEventListener('dragover', e => {
+    e.preventDefault();
+    col.classList.add('drop-target');
+  });
+  col.addEventListener('dragleave', () => col.classList.remove('drop-target'));
+  col.addEventListener('drop', e => {
+    e.preventDefault();
+    col.classList.remove('drop-target');
+    const targetStatus = col.closest('.column').dataset.status;
+    if (!dragId || (targetStatus !== 'queue')) return;
+    const task = taskMap[dragId];
+    if (!task) return;
+    // Re-queue: emit retry which creates a fresh task
+    socket.emit('retry_task', { id: dragId });
+  });
+});
+
+// ── Detail Panel ───────────────────────────────────────────
+function openDetail(id) {
+  activeTaskId = id;
+  const task = taskMap[id];
+  if (!task) return;
+  renderDetail(task);
+  document.getElementById('detail-panel').classList.add('open');
+}
+
+function closeDetail() {
+  activeTaskId = null;
+  document.getElementById('detail-panel').classList.remove('open');
+}
+
+function renderDetail(task) {
+  document.getElementById('detail-title').textContent = '#' + task.id;
+  document.getElementById('detail-desc').textContent = task.description;
+
+  // Screenshot
+  const img = document.getElementById('live-screenshot');
+  const placeholder = document.getElementById('no-screenshot');
+  if (task.screenshot) {
+    img.src = 'data:image/png;base64,' + task.screenshot;
+    img.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    img.style.display = 'none';
+    placeholder.style.display = 'block';
+  }
+
+  // History
+  const hist = document.getElementById('detail-history');
+  hist.innerHTML = '';
+  if (task.steps && task.steps.length > 0) {
+    task.steps.forEach((s, i) => {
+      const row = document.createElement('div');
+      row.className = 'history-row';
+      row.innerHTML = `
+        <span class="history-time">${s.time}s</span>
+        <span class="history-action">${escHtml(JSON.stringify(s.action))}</span>
+      `;
+      hist.appendChild(row);
+    });
+    hist.scrollTop = hist.scrollHeight;
+  }
+
+  // Error
+  const errEl = document.getElementById('detail-error');
+  if (task.error) {
+    errEl.textContent = '⚠ ' + task.error;
+    errEl.style.display = 'block';
+  } else {
+    errEl.style.display = 'none';
+  }
+
+  // Action buttons
+  document.getElementById('btn-stop').style.display = task.status === 'running' ? 'inline-block' : 'none';
+  document.getElementById('btn-retry').style.display = task.status === 'failed' ? 'inline-block' : 'none';
+}
+
+document.getElementById('detail-close').addEventListener('click', closeDetail);
+
+document.getElementById('btn-stop').addEventListener('click', () => {
+  if (activeTaskId) socket.emit('stop_task', { id: activeTaskId });
+});
+
+document.getElementById('btn-retry').addEventListener('click', () => {
+  if (activeTaskId) {
+    socket.emit('retry_task', { id: activeTaskId });
+    closeDetail();
+  }
+});
+
+// ── Sidebar controls ───────────────────────────────────────
+const stepsSlider = document.getElementById('max-steps');
+const stepsVal = document.getElementById('max-steps-val');
+stepsSlider.addEventListener('input', () => {
+  stepsVal.textContent = stepsSlider.value;
+  document.getElementById('modal-steps').value =
+    [...document.getElementById('modal-steps').options]
+      .map(o => parseInt(o.value))
+      .reduce((prev, cur) => Math.abs(cur - parseInt(stepsSlider.value)) < Math.abs(prev - parseInt(stepsSlider.value)) ? cur : prev);
+});
+
+const sidebarModel = document.getElementById('model-select');
+sidebarModel.addEventListener('change', () => {
+  document.getElementById('modal-model').value = sidebarModel.value;
+});
+
+// ── Modal ──────────────────────────────────────────────────
+const overlay = document.getElementById('modal-overlay');
+
+function openModal() {
+  document.getElementById('modal-model').value = sidebarModel.value;
+  document.getElementById('task-input').value = '';
+  overlay.classList.add('open');
+  setTimeout(() => document.getElementById('task-input').focus(), 50);
+}
+
+function closeModal() {
+  overlay.classList.remove('open');
+}
+
+document.getElementById('btn-new').addEventListener('click', openModal);
+document.getElementById('btn-cancel').addEventListener('click', closeModal);
+overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+document.getElementById('task-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submitTask();
+});
+
+document.getElementById('btn-submit').addEventListener('click', submitTask);
+
+function submitTask() {
+  const task = document.getElementById('task-input').value.trim();
+  if (!task) return;
+  const model = document.getElementById('modal-model').value;
+  const max_steps = parseInt(document.getElementById('modal-steps').value);
+  socket.emit('create_task', { task, model, max_steps });
+  closeModal();
+}
+
+// ── Keyboard shortcuts ─────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeModal();
+    closeDetail();
+  }
+  if (e.key === 'n' && !e.metaKey && !e.ctrlKey && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
+    openModal();
+  }
+});
+
+// ── Helpers ────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── Init empty columns ─────────────────────────────────────
+updateCounts();
+</script>
+</body>
+</html>

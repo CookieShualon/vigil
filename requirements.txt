@@ -1,0 +1,6 @@
+playwright
+openai
+python-dotenv
+flask
+flask-socketio
+eventlet

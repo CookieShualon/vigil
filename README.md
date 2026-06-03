@@ -1,5 +1,7 @@
 # Vigil
 
+![Vigil demo](demo.gif)
+
 An LLM-driven browser agent that uses the Venice API to complete tasks in a headless Chromium browser via Playwright. Includes a full-stack web dashboard with a Kanban board and live screenshot streaming.
 
 ## Setup

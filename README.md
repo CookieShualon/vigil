@@ -77,8 +77,8 @@ The dashboard at `http://localhost:5000` provides:
 
 - `grok-4-3`
 - `gemini-3-5-flash`
-- `claude-opus-45`
-- `qwen3-coder-480b`
+- `claude-opus-4-8`
+- `qwen3-coder-480b-a35b-instruct-turbo`
 
 ## Config
 

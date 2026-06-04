@@ -136,6 +136,8 @@ Cookies are stored locally at `./data/cookies/{domain}.json` and are excluded fr
 ├── agent.py         — agentic loop, run_agent_with_callbacks (pause flag, resume event)
 ├── browser.py       — Playwright wrapper, screenshot stream, coordinate click/keyboard input
 ├── llm.py           — Venice API client (async, thread-executor)
+├── prompt.md        — readable reference copy of the browser agent system prompt
+├── AGENTS.md        — maintainer notes for agents working in this repo
 ├── actions.py       — action dispatcher
 ├── cookies.py       — JSON cookie store (./data/cookies/)
 ├── config.py        — loads .env
@@ -165,6 +167,10 @@ Cookies are stored locally at `./data/cookies/{domain}.json` and are excluded fr
 `report` is the normal completion action for every successful task. The markdown is rendered in the task detail panel and should briefly say what the agent did. If a model returns `done`, Vigil converts it into a report from the recorded action history.
 
 `handoff` is a soft terminal — the loop pauses and waits for the user to take over, then resumes after control is returned. See [Take the Wheel](#take-the-wheel).
+
+## Prompt Maintenance
+
+The browser agent system prompt is implemented in `llm.py` and mirrored in `prompt.md` for easier reading. Whenever the system prompt changes, update `prompt.md` in the same change so the readable copy stays in sync with the code.
 
 ## Supported models (Venice API)
 

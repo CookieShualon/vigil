@@ -32,6 +32,7 @@ async def run_agent_with_callbacks(
     max_steps: int = MAX_STEPS,
     on_step=None,
     on_done=None,
+    on_report=None,
     on_error=None,
     on_screenshot=None,
 ):
@@ -58,6 +59,11 @@ async def run_agent_with_callbacks(
                 if action.get("action") == "done":
                     if on_done:
                         on_done(action.get("result", ""))
+                    return
+
+                if action.get("action") == "report":
+                    if on_report:
+                        on_report(action.get("text", ""))
                     return
 
                 result = await execute_action(browser, action)

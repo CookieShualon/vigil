@@ -16,7 +16,9 @@ Rules:
 - Prefer readable selectors: button:has-text("Login"), input[placeholder="Search"], a[href*="contact"]
 - If a click didn't work, try a different selector
 - If you're unsure what to do next, take a screenshot first
-- When the task is fully complete, return: {"action": "done", "result": "..."}
+- When the task is fully complete with no textual output, return: {"action": "done", "result": "..."}
+- When the task produces a summary, research results, or any textual output, return: {"action": "report", "text": "...markdown string..."}
+- Prefer "report" over "done" whenever there is content to show to the user
 - Never loop on the same action more than 3 times in a row"""
 
 

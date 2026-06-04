@@ -45,6 +45,7 @@ def handle_create_task(data):
         "screenshot": None,
         "elapsed": 0,
         "result": None,
+        "report": None,
         "error": None,
         "started_at": None,
     }
@@ -85,6 +86,7 @@ def handle_retry_task(data):
         "screenshot": None,
         "elapsed": 0,
         "result": None,
+        "report": None,
         "error": None,
         "started_at": None,
     }
@@ -125,6 +127,13 @@ def run_task_thread(task_id: str):
             task["elapsed"] = round(time.time() - task["started_at"], 1)
             socketio.emit("task_update", task)
 
+        def on_report(report_text):
+            task["status"] = "done"
+            task["report"] = report_text
+            task["result"] = "Report generated."
+            task["elapsed"] = round(time.time() - task["started_at"], 1)
+            socketio.emit("task_update", task)
+
         def on_error(error):
             if task["status"] == "running":
                 task["status"] = "failed"
@@ -141,6 +150,7 @@ def run_task_thread(task_id: str):
             max_steps=task["max_steps"],
             on_step=on_step,
             on_done=on_done,
+            on_report=on_report,
             on_error=on_error,
             on_screenshot=on_screenshot,
         ))

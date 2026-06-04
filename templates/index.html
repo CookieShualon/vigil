@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -383,6 +384,50 @@
     font-size: 11px; color: var(--border); text-align: center; padding-top: 30px;
     user-select: none;
   }
+
+  /* ── Report ── */
+  #detail-report-wrap {
+    display: none;
+  }
+  #detail-report-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+  }
+  #btn-copy-report {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); font-family: inherit; font-size: 10px;
+    padding: 3px 8px; border-radius: 3px; cursor: pointer;
+    margin-left: auto;
+  }
+  #btn-copy-report:hover { border-color: var(--accent); color: var(--accent); }
+  #btn-copy-report.copied { color: var(--done); border-color: var(--done); }
+
+  #detail-report {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 12px 14px;
+    font-size: 12px; line-height: 1.7; color: var(--text);
+  }
+  #detail-report h1, #detail-report h2, #detail-report h3 {
+    color: var(--accent); font-size: 13px; margin: 10px 0 4px;
+  }
+  #detail-report h1 { font-size: 14px; }
+  #detail-report p { margin: 0 0 8px; }
+  #detail-report ul, #detail-report ol { padding-left: 18px; margin: 0 0 8px; }
+  #detail-report li { margin-bottom: 3px; }
+  #detail-report code {
+    background: #1e1e1e; border-radius: 3px; padding: 1px 5px;
+    font-family: inherit; font-size: 11px; color: #c8ff00;
+  }
+  #detail-report pre {
+    background: #1e1e1e; border-radius: 4px; padding: 10px;
+    overflow-x: auto; margin: 0 0 8px;
+  }
+  #detail-report pre code { background: none; padding: 0; }
+  #detail-report a { color: var(--running); }
+  #detail-report strong { color: #fff; }
+  #detail-report blockquote {
+    border-left: 2px solid var(--border); padding-left: 10px;
+    color: var(--muted); margin: 0 0 8px;
+  }
 </style>
 </head>
 <body>
@@ -505,6 +550,13 @@
     <div>
       <div class="detail-section-label">Action History</div>
       <div id="detail-history"></div>
+    </div>
+    <div id="detail-report-wrap">
+      <div id="detail-report-header">
+        <div class="detail-section-label" style="margin-bottom:0">Report</div>
+        <button id="btn-copy-report">Copy</button>
+      </div>
+      <div id="detail-report"></div>
     </div>
     <div id="detail-error"></div>
   </div>
@@ -747,6 +799,16 @@ function renderDetail(task) {
     hist.scrollTop = hist.scrollHeight;
   }
 
+  // Report
+  const reportWrap = document.getElementById('detail-report-wrap');
+  const reportEl = document.getElementById('detail-report');
+  if (task.report) {
+    reportEl.innerHTML = marked.parse(task.report);
+    reportWrap.style.display = 'block';
+  } else {
+    reportWrap.style.display = 'none';
+  }
+
   // Error
   const errEl = document.getElementById('detail-error');
   if (task.error) {
@@ -772,6 +834,20 @@ document.getElementById('btn-retry').addEventListener('click', () => {
     socket.emit('retry_task', { id: activeTaskId });
     closeDetail();
   }
+});
+
+document.getElementById('btn-copy-report').addEventListener('click', () => {
+  const task = activeTaskId ? taskMap[activeTaskId] : null;
+  if (!task || !task.report) return;
+  navigator.clipboard.writeText(task.report).then(() => {
+    const btn = document.getElementById('btn-copy-report');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 1500);
+  });
 });
 
 // ── Sidebar controls ───────────────────────────────────────

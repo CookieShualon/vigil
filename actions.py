@@ -27,6 +27,9 @@ async def execute_action(browser: BrowserSession, action: dict) -> str:
             # Just signals the agent to take a fresh screenshot — handled in the main loop
             return "screenshot requested"
 
+        elif name == "report":
+            return "report accepted"
+
         else:
             return f"Unknown action: {name}"
 

@@ -4,6 +4,15 @@ from llm import ask_llm
 from actions import execute_action
 from config import MAX_STEPS
 
+SHORT_DONE_RESULTS = {"", "done", "complete", "completed", "ok", "success", "finished"}
+
+
+def _done_result_as_report(action: dict) -> str | None:
+    result = str(action.get("result", "")).strip()
+    if result.lower().rstrip(".!") in SHORT_DONE_RESULTS:
+        return None
+    return result or None
+
 
 async def run_agent(task: str):
     history = []
@@ -16,6 +25,10 @@ async def run_agent(task: str):
             print(f"[Step {step + 1}] {action}")
 
             if action.get("action") == "done":
+                report_text = _done_result_as_report(action)
+                if report_text:
+                    print(f"\nReport:\n{report_text}")
+                    return
                 print(f"\n✅ Done: {action.get('result')}")
                 return
 
@@ -79,7 +92,10 @@ async def run_agent_with_callbacks(
                     on_step(step + 1, action, screenshot_b64)
 
                 if action.get("action") == "done":
-                    if on_done:
+                    report_text = _done_result_as_report(action)
+                    if report_text and on_report:
+                        on_report(report_text)
+                    elif on_done:
                         on_done(action.get("result", ""))
                     return
 

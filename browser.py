@@ -1,9 +1,19 @@
 import asyncio
 import base64
+import logging
 from urllib.parse import urlparse
-from playwright.async_api import async_playwright, Page, Browser, BrowserContext
+from playwright.async_api import (
+    async_playwright,
+    Page,
+    Browser,
+    BrowserContext,
+    Error as PlaywrightError,
+    TimeoutError as PlaywrightTimeoutError,
+)
 from config import VIEWPORT_WIDTH, VIEWPORT_HEIGHT
 from cookies import load_cookies, save_cookies
+
+logger = logging.getLogger(__name__)
 
 
 def _domain_from_url(url: str) -> str | None:
@@ -26,15 +36,23 @@ class BrowserSession:
 
     async def __aenter__(self):
         self._playwright = await async_playwright().start()
+        logger.info(
+            "Launching Chromium headless=True executable=%s",
+            self._playwright.chromium.executable_path,
+        )
         self._browser = await self._playwright.chromium.launch(headless=True)
+        logger.info("Chromium launched")
         self._context = await self._browser.new_context(
             viewport={"width": VIEWPORT_WIDTH, "height": VIEWPORT_HEIGHT}
         )
+        logger.info("Browser context created viewport=%sx%s", VIEWPORT_WIDTH, VIEWPORT_HEIGHT)
         if self._cookie_domain:
             stored = load_cookies(self._cookie_domain)
             if stored:
+                logger.info("Loading %s stored cookies for %s", len(stored), self._cookie_domain)
                 await self._context.add_cookies(stored)
         self.page = await self._context.new_page()
+        self._attach_page_diagnostics(self.page)
         await self.page.goto("about:blank")
         self._streaming = True
         return self
@@ -46,18 +64,75 @@ class BrowserSession:
                 updated = await self._context.cookies()
                 if updated:
                     save_cookies(self._cookie_domain, updated)
+                    logger.info("Saved %s cookies for %s", len(updated), self._cookie_domain)
             except Exception:
-                pass
-        await self._browser.close()
-        await self._playwright.stop()
+                logger.exception("Failed to save cookies for %s", self._cookie_domain)
+        if self._browser:
+            await self._browser.close()
+        if self._playwright:
+            await self._playwright.stop()
+
+    def _attach_page_diagnostics(self, page: Page) -> None:
+        page.on(
+            "console",
+            lambda msg: logger.warning(
+                "Browser console %s: %s", msg.type, msg.text
+            ) if msg.type in ("error", "warning") else logger.debug(
+                "Browser console %s: %s", msg.type, msg.text
+            ),
+        )
+        page.on("pageerror", lambda exc: logger.error("Browser page error: %s", exc))
+        page.on("crash", lambda: logger.error("Browser page crashed url=%s", page.url))
+        page.on("close", lambda: logger.info("Browser page closed url=%s", page.url))
+        page.on(
+            "requestfailed",
+            lambda request: logger.error(
+                "Browser request failed method=%s url=%s failure=%s",
+                request.method,
+                request.url,
+                request.failure,
+            ),
+        )
+        page.on(
+            "response",
+            lambda response: logger.info(
+                "Browser document response status=%s url=%s",
+                response.status,
+                response.url,
+            ) if response.request.resource_type == "document" else None,
+        )
 
     async def screenshot(self) -> str:
         png_bytes = await self.page.screenshot(type="png")
+        logger.debug(
+            "Captured screenshot bytes=%s url=%s",
+            len(png_bytes),
+            self.page.url,
+        )
         return base64.b64encode(png_bytes).decode("utf-8")
 
     async def navigate(self, url: str) -> str:
-        await self.page.goto(url, wait_until="domcontentloaded", timeout=30000)
-        return f"Navigated to {url}"
+        if "://" not in url:
+            url = f"https://{url}"
+
+        logger.info("Navigating to %s from %s", url, self.page.url)
+        try:
+            response = await self.page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            try:
+                await self.page.wait_for_load_state("load", timeout=10000)
+            except PlaywrightTimeoutError:
+                logger.warning("Timed out waiting for load state after %s", url)
+            await self.page.wait_for_timeout(300)
+        except PlaywrightError as e:
+            logger.exception("Navigation failed url=%s current_url=%s", url, self.page.url)
+            raise RuntimeError(
+                f"Navigation failed for {url}: {e}. Current browser URL: {self.page.url}"
+            ) from e
+
+        status = response.status if response else "no response"
+        final_url = self.page.url
+        logger.info("Navigation complete url=%s final_url=%s status=%s", url, final_url, status)
+        return f"Navigated to {final_url} (status {status})"
 
     async def click(self, selector: str) -> str:
         await self.page.click(selector, timeout=10000)
@@ -83,7 +158,10 @@ class BrowserSession:
                 screenshot = await self.screenshot()
                 callback(screenshot)
             except Exception:
-                pass
+                logger.exception(
+                    "Screenshot stream capture failed url=%s",
+                    self.page.url if self.page else None,
+                )
             await asyncio.sleep(interval_ms / 1000)
 
     async def extract(self, selector: str, description: str) -> str:

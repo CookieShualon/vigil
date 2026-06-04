@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import threading
 import time
 import uuid
@@ -8,6 +9,11 @@ from flask_socketio import SocketIO, emit
 
 from agent import run_agent_with_callbacks
 from cookies import list_domains, load_cookies, save_cookies, delete_cookies
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "browser-agent-secret"

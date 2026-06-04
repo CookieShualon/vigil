@@ -1,11 +1,17 @@
+import logging
+
 from browser import BrowserSession
+
+logger = logging.getLogger(__name__)
+
+NAVIGATE_ACTIONS = {"navigate", "goto", "go_to", "open", "url"}
 
 
 async def execute_action(browser: BrowserSession, action: dict) -> str:
     name = action.get("action")
 
     try:
-        if name == "navigate":
+        if name in NAVIGATE_ACTIONS:
             return await browser.navigate(action["url"])
 
         elif name == "click":
@@ -31,7 +37,10 @@ async def execute_action(browser: BrowserSession, action: dict) -> str:
             return "report accepted"
 
         else:
+            logger.warning("Unsupported action received from LLM: %s", action)
             return f"Unknown action: {name}"
 
     except Exception as e:
+        if name in NAVIGATE_ACTIONS:
+            raise
         return f"ERROR: {e}"

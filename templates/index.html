@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -303,6 +304,13 @@
   .modal-field label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
 
   .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+  #modal-error {
+    display: none;
+    color: var(--failed);
+    font-size: 11px;
+    line-height: 1.5;
+  }
 
   .btn-cancel {
     background: transparent;
@@ -788,6 +796,7 @@
         <option value="">None</option>
       </select>
     </div>
+    <div id="modal-error"></div>
     <div class="modal-actions">
       <button class="btn-cancel" id="btn-cancel">Cancel</button>
       <button class="btn-submit" id="btn-submit">Run Task</button>
@@ -897,6 +906,14 @@ socket.on('task_update', (task) => {
   applyTask(task);
   updateCounts();
   if (activeTaskId === task.id) renderDetail(task);
+});
+
+socket.on('create_task_error', (data) => {
+  showModalError(data.error || 'Could not create task.');
+});
+
+socket.on('task_created', () => {
+  closeModal();
 });
 
 socket.on('screenshot_update', (data) => {
@@ -1167,7 +1184,12 @@ function renderDetail(task) {
   const reportWrap = document.getElementById('detail-report-wrap');
   const reportEl = document.getElementById('detail-report');
   if (task.report) {
-    reportEl.innerHTML = marked.parse(task.report);
+    const rendered = marked.parse(task.report);
+    if (window.DOMPurify) {
+      reportEl.innerHTML = DOMPurify.sanitize(rendered);
+    } else {
+      reportEl.textContent = task.report;
+    }
     reportWrap.style.display = 'block';
   } else {
     reportWrap.style.display = 'none';
@@ -1414,12 +1436,14 @@ const overlay = document.getElementById('modal-overlay');
 function openModal() {
   document.getElementById('modal-model').value = sidebarModel.value;
   document.getElementById('task-input').value = '';
+  clearModalError();
   overlay.classList.add('open');
   setTimeout(() => document.getElementById('task-input').focus(), 50);
 }
 
 function closeModal() {
   overlay.classList.remove('open');
+  clearModalError();
 }
 
 document.getElementById('btn-new').addEventListener('click', openModal);
@@ -1434,12 +1458,27 @@ document.getElementById('btn-submit').addEventListener('click', submitTask);
 
 function submitTask() {
   const task = document.getElementById('task-input').value.trim();
-  if (!task) return;
+  clearModalError();
+  if (!task) {
+    showModalError('Task text is required.');
+    return;
+  }
   const model = document.getElementById('modal-model').value;
   const max_steps = parseInt(document.getElementById('modal-steps').value);
   const cookie_domain = document.getElementById('modal-cookie-domain').value || null;
   socket.emit('create_task', { task, model, max_steps, cookie_domain });
-  closeModal();
+}
+
+function showModalError(message) {
+  const el = document.getElementById('modal-error');
+  el.textContent = message;
+  el.style.display = 'block';
+}
+
+function clearModalError() {
+  const el = document.getElementById('modal-error');
+  el.textContent = '';
+  el.style.display = 'none';
 }
 
 // ── Keyboard shortcuts ─────────────────────────────────────

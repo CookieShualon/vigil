@@ -98,3 +98,15 @@ class BrowserSession:
         except Exception as e:
             content = f"(extraction error: {e})"
         return f"Extracted [{description}]: {content}"
+
+    async def click_coordinates(self, x: int, y: int) -> str:
+        await self.page.mouse.click(x, y)
+        return f"Clicked at ({x}, {y})"
+
+    async def type_keys(self, text: str) -> str:
+        await self.page.keyboard.type(text)
+        return "Typed text"
+
+    async def press_key(self, key: str) -> str:
+        await self.page.keyboard.press(key)
+        return f"Pressed {key}"

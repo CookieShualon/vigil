@@ -36,6 +36,11 @@ async def run_agent_with_callbacks(
     on_report=None,
     on_error=None,
     on_screenshot=None,
+    pause_flag: dict | None = None,
+    resume_event=None,
+    on_paused=None,
+    on_resumed=None,
+    on_handoff=None,
 ):
     history = []
     stream_task = None
@@ -51,6 +56,18 @@ async def run_agent_with_callbacks(
                 )
 
             for step in range(max_steps):
+                # Check pause flag between steps — never interrupts mid-action
+                if pause_flag and pause_flag.get("paused"):
+                    if on_paused:
+                        await on_paused(browser)
+                    loop = asyncio.get_event_loop()
+                    await loop.run_in_executor(None, resume_event.wait)
+                    resume_event.clear()
+                    if pause_flag.get("abort"):
+                        return
+                    if on_resumed:
+                        await on_resumed(browser)
+
                 screenshot_b64 = await browser.screenshot()
                 action = await ask_llm(task, screenshot_b64, history, model=model)
 
@@ -66,6 +83,22 @@ async def run_agent_with_callbacks(
                     if on_report:
                         on_report(action.get("text", ""))
                     return
+
+                if action.get("action") == "handoff":
+                    if on_handoff and resume_event:
+                        await on_handoff(browser, action.get("reason", ""))
+                        loop = asyncio.get_event_loop()
+                        await loop.run_in_executor(None, resume_event.wait)
+                        resume_event.clear()
+                        if pause_flag and pause_flag.get("abort"):
+                            return
+                        if on_resumed:
+                            await on_resumed(browser)
+                        continue
+                    else:
+                        if on_error:
+                            on_error(f"Agent requested handoff: {action.get('reason', '')}")
+                        return
 
                 result = await execute_action(browser, action)
                 history.append({"action": action, "result": result})

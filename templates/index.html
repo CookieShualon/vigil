@@ -24,6 +24,7 @@
     --done: #22c55e;
     --failed: #ef4444;
     --queue: #888888;
+    --paused: #f59e0b;
   }
 
   html, body { height: 100%; overflow: hidden; }
@@ -117,7 +118,7 @@
   #board {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 0;
     overflow: hidden;
   }
@@ -151,6 +152,7 @@
 
   .col-queue   .col-title { color: var(--queue); }
   .col-running .col-title { color: var(--running); }
+  .col-paused  .col-title { color: var(--paused); }
   .col-done    .col-title { color: var(--done); }
   .col-failed  .col-title { color: var(--failed); }
 
@@ -188,12 +190,17 @@
   }
   .dot-queue   { background: var(--queue); }
   .dot-running { background: var(--running); animation: pulse 1.4s ease-in-out infinite; }
+  .dot-paused  { background: var(--paused); animation: pulse-slow 2s ease-in-out infinite; }
   .dot-done    { background: var(--done); }
   .dot-failed  { background: var(--failed); }
 
   @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.3; }
+  }
+  @keyframes pulse-slow {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(245,158,11,0.4); }
+    50% { opacity: 0.6; box-shadow: 0 0 0 4px rgba(245,158,11,0); }
   }
 
   .card-desc {
@@ -204,6 +211,7 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    flex: 1;
   }
 
   .card-meta {
@@ -234,6 +242,24 @@
     bottom: 8px;
     right: 10px;
   }
+
+  /* Take the Wheel button on cards */
+  .btn-take-wheel {
+    background: rgba(245,158,11,0.12);
+    border: 1px solid rgba(245,158,11,0.35);
+    color: var(--paused);
+    font-family: inherit;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 3px 7px;
+    border-radius: 3px;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 0.15s;
+  }
+  .btn-take-wheel:hover { background: rgba(245,158,11,0.25); }
 
   /* ── Modal ── */
   #modal-overlay {
@@ -349,7 +375,95 @@
     background: var(--surface2); border-radius: 4px; padding: 10px;
   }
 
+  /* Live browser screenshot area */
+  #live-browser-wrap {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg);
+    position: relative;
+  }
+  #live-browser-wrap.interactive {
+    border-color: var(--paused);
+    cursor: crosshair;
+  }
 
+  #live-screenshot {
+    width: 100%;
+    display: none;
+    object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+  #live-browser-wrap.interactive #live-screenshot {
+    pointer-events: auto;
+  }
+  #live-browser-wrap:not(.interactive) #live-screenshot {
+    pointer-events: none;
+  }
+
+  #no-screenshot {
+    text-align: center; color: #444; font-size: 12px; padding: 40px;
+  }
+
+  /* Manual control overlay badge */
+  #manual-badge {
+    display: none;
+    position: absolute;
+    top: 8px; left: 8px;
+    background: rgba(245,158,11,0.9);
+    color: #000;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 3px 8px;
+    border-radius: 3px;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* Agent-requested handoff reason banner */
+  #handoff-banner {
+    display: none;
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.35);
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  #handoff-banner.visible { display: block; }
+  #handoff-banner strong { color: var(--paused); }
+
+  /* Keyboard input bar shown when paused */
+  #manual-keyboard {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 0;
+  }
+  #manual-keyboard.visible { display: flex; }
+
+  #keyboard-hint {
+    font-size: 10px;
+    color: var(--paused);
+    letter-spacing: 0.04em;
+  }
+
+  #keyboard-input {
+    background: var(--surface2);
+    border: 1px solid rgba(245,158,11,0.4);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    width: 100%;
+    outline: none;
+  }
+  #keyboard-input:focus { border-color: var(--paused); }
+  #keyboard-input::placeholder { color: var(--muted); }
 
   #detail-history {
     display: flex; flex-direction: column; gap: 4px;
@@ -394,6 +508,26 @@
     padding: 8px 16px; border-radius: 4px; cursor: pointer;
   }
   .btn-retry:hover { background: rgba(200,255,0,0.2); }
+
+  /* Take the Wheel / Give Back Control buttons in detail footer */
+  #btn-take-wheel-detail {
+    background: rgba(245,158,11,0.12);
+    color: var(--paused);
+    border: 1px solid rgba(245,158,11,0.35);
+    font-family: inherit; font-size: 12px; font-weight: 700;
+    padding: 8px 16px; border-radius: 4px; cursor: pointer;
+    display: none;
+  }
+  #btn-take-wheel-detail:hover { background: rgba(245,158,11,0.25); }
+
+  #btn-give-back {
+    background: rgba(200,255,0,0.1); color: var(--accent);
+    border: 1px solid rgba(200,255,0,0.35);
+    font-family: inherit; font-size: 12px; font-weight: 700;
+    padding: 8px 16px; border-radius: 4px; cursor: pointer;
+    display: none;
+  }
+  #btn-give-back:hover { background: rgba(200,255,0,0.2); }
 
   .empty-col {
     font-size: 11px; color: var(--border); text-align: center; padding-top: 30px;
@@ -596,6 +730,13 @@
       </div>
       <div class="col-body" id="body-running"></div>
     </div>
+    <div class="column col-paused" data-status="paused" id="col-paused">
+      <div class="col-header">
+        <span class="col-title">Paused</span>
+        <span class="col-count" id="count-paused">0</span>
+      </div>
+      <div class="col-body" id="body-paused"></div>
+    </div>
     <div class="column col-done" data-status="done" id="col-done">
       <div class="col-header">
         <span class="col-title">Done</span>
@@ -688,9 +829,14 @@
       <div class="detail-section-label">Task</div>
       <div id="detail-desc"></div>
     </div>
+    <div id="handoff-banner">
+      <strong>Agent needs your help</strong><br>
+      <span id="handoff-reason-text"></span>
+    </div>
     <div id="live-browser">
       <div class="detail-section-label">Live Browser</div>
-      <div style="border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--bg);">
+      <div id="live-browser-wrap">
+        <span id="manual-badge">MANUAL CONTROL</span>
         <img id="live-screenshot"
              src=""
              alt="browser view"
@@ -699,6 +845,10 @@
         <p id="no-screenshot" style="text-align: center; color: #444; font-size: 12px; padding: 40px;">
           waiting for screenshot...
         </p>
+      </div>
+      <div id="manual-keyboard">
+        <span id="keyboard-hint">click screenshot to interact · type below to send keystrokes</span>
+        <input id="keyboard-input" type="text" placeholder="type here…" autocomplete="off" />
       </div>
     </div>
     <div>
@@ -716,6 +866,8 @@
   </div>
   <div id="detail-actions">
     <button class="btn-stop" id="btn-stop">Stop</button>
+    <button id="btn-take-wheel-detail">Take the Wheel</button>
+    <button id="btn-give-back">Give Back Control</button>
     <button class="btn-retry" id="btn-retry">Retry</button>
   </div>
 </div>
@@ -724,9 +876,9 @@
 const socket = io();
 
 // ── State ──────────────────────────────────────────────────
-const taskMap = {};   // id -> task object
+const taskMap = {};
 let activeTaskId = null;
-let elapsedTimers = {};  // id -> setInterval handle
+let elapsedTimers = {};
 
 // ── Socket events ──────────────────────────────────────────
 socket.on('connect', () => {
@@ -756,13 +908,10 @@ socket.on('screenshot_update', (data) => {
 
 // ── Task state management ──────────────────────────────────
 function applyTask(task) {
-  const existing = taskMap[task.id];
   taskMap[task.id] = task;
 
-  // Move card if status changed or create new
   const card = document.getElementById('card-' + task.id);
   if (card) {
-    // Update in place if same column
     const col = card.closest('.col-body');
     if (col && col.id === 'body-' + task.status) {
       updateCard(card, task);
@@ -771,8 +920,7 @@ function applyTask(task) {
     card.remove();
   }
 
-  // Stop old timer if status changed away from running
-  if (task.status !== 'running') stopTimer(task.id);
+  if (task.status !== 'running' && task.status !== 'paused') stopTimer(task.id);
 
   const newCard = buildCard(task);
   const body = document.getElementById('body-' + task.status);
@@ -782,7 +930,7 @@ function applyTask(task) {
     body.prepend(newCard);
   }
 
-  if (task.status === 'running') startTimer(task.id);
+  if (task.status === 'running' || task.status === 'paused') startTimer(task.id);
   updateCounts();
 }
 
@@ -793,6 +941,16 @@ function buildCard(task) {
   div.id = 'card-' + task.id;
   div.innerHTML = cardHTML(task);
   div.addEventListener('click', () => openDetail(task.id));
+
+  // Attach Take the Wheel button handler without propagating to card click
+  const twBtn = div.querySelector('.btn-take-wheel');
+  if (twBtn) {
+    twBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      takeWheel(task.id);
+    });
+  }
+
   setupDrag(div, task);
   return div;
 }
@@ -800,8 +958,17 @@ function buildCard(task) {
 function updateCard(card, task) {
   card.innerHTML = cardHTML(task);
   card.onclick = () => openDetail(task.id);
+
+  const twBtn = card.querySelector('.btn-take-wheel');
+  if (twBtn) {
+    twBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      takeWheel(task.id);
+    });
+  }
+
   setupDrag(card, task);
-  if (task.status === 'running') startTimer(task.id);
+  if (task.status === 'running' || task.status === 'paused') startTimer(task.id);
   else stopTimer(task.id);
 }
 
@@ -811,14 +978,19 @@ function cardHTML(task) {
     ? '→ ' + JSON.stringify(lastStep.action).slice(0, 80)
     : 'waiting…';
   const elapsed = task.elapsed ? task.elapsed + 's' : '';
-  const stepLabel = task.status === 'running' || task.status === 'done'
+  const stepLabel = task.status === 'running' || task.status === 'done' || task.status === 'paused'
     ? `step ${task.step} / ${task.total_steps}`
+    : '';
+
+  const takeWheelBtn = task.status === 'running'
+    ? `<button class="btn-take-wheel">Take the Wheel</button>`
     : '';
 
   return `
     <div class="card-top">
       <span class="status-dot dot-${task.status}"></span>
       <span class="card-desc">${escHtml(task.description)}</span>
+      ${takeWheelBtn}
     </div>
     <div class="card-meta">
       <span class="card-model">${escHtml(task.model)}</span>
@@ -827,6 +999,12 @@ function cardHTML(task) {
     <div class="card-log ${lastStep ? 'has-log' : ''}">${escHtml(logText)}</div>
     <span class="card-elapsed" id="elapsed-${task.id}">${elapsed}</span>
   `;
+}
+
+// ── Take the Wheel ─────────────────────────────────────────
+function takeWheel(id) {
+  socket.emit('pause_task', { id });
+  if (activeTaskId !== id) openDetail(id);
 }
 
 // ── Elapsed timers ─────────────────────────────────────────
@@ -852,11 +1030,13 @@ function stopTimer(id) {
 
 // ── Column counts ──────────────────────────────────────────
 function updateCounts() {
-  ['queue', 'running', 'done', 'failed'].forEach(s => {
+  ['queue', 'running', 'paused', 'done', 'failed'].forEach(s => {
     const count = Object.values(taskMap).filter(t => t.status === s).length;
-    document.getElementById('count-' + s).textContent = count;
+    const countEl = document.getElementById('count-' + s);
+    if (countEl) countEl.textContent = count;
 
     const body = document.getElementById('body-' + s);
+    if (!body) return;
     const cards = body.querySelectorAll('.card');
     if (cards.length === 0 && !body.querySelector('.empty-col')) {
       const e = document.createElement('div');
@@ -899,10 +1079,9 @@ document.querySelectorAll('.col-body').forEach(col => {
     e.preventDefault();
     col.classList.remove('drop-target');
     const targetStatus = col.closest('.column').dataset.status;
-    if (!dragId || (targetStatus !== 'queue')) return;
+    if (!dragId || targetStatus !== 'queue') return;
     const task = taskMap[dragId];
     if (!task) return;
-    // Re-queue: emit retry which creates a fresh task
     socket.emit('retry_task', { id: dragId });
   });
 });
@@ -937,11 +1116,36 @@ function renderDetail(task) {
     placeholder.style.display = 'block';
   }
 
+  // Manual control mode UI
+  const wrap = document.getElementById('live-browser-wrap');
+  const badge = document.getElementById('manual-badge');
+  const keyboard = document.getElementById('manual-keyboard');
+  const banner = document.getElementById('handoff-banner');
+  const bannerText = document.getElementById('handoff-reason-text');
+  const isPaused = task.status === 'paused';
+
+  if (isPaused) {
+    wrap.classList.add('interactive');
+    badge.style.display = 'block';
+    keyboard.classList.add('visible');
+  } else {
+    wrap.classList.remove('interactive');
+    badge.style.display = 'none';
+    keyboard.classList.remove('visible');
+  }
+
+  if (isPaused && task.handoff_reason) {
+    bannerText.textContent = task.handoff_reason;
+    banner.classList.add('visible');
+  } else {
+    banner.classList.remove('visible');
+  }
+
   // History
   const hist = document.getElementById('detail-history');
   hist.innerHTML = '';
   if (task.steps && task.steps.length > 0) {
-    task.steps.forEach((s, i) => {
+    task.steps.forEach((s) => {
       const row = document.createElement('div');
       row.className = 'history-row';
       row.innerHTML = `
@@ -972,15 +1176,29 @@ function renderDetail(task) {
     errEl.style.display = 'none';
   }
 
-  // Action buttons
-  document.getElementById('btn-stop').style.display = task.status === 'running' ? 'inline-block' : 'none';
-  document.getElementById('btn-retry').style.display = task.status === 'failed' ? 'inline-block' : 'none';
+  // Footer action buttons
+  document.getElementById('btn-stop').style.display =
+    (task.status === 'running' || task.status === 'paused') ? 'inline-block' : 'none';
+  document.getElementById('btn-take-wheel-detail').style.display =
+    task.status === 'running' ? 'inline-block' : 'none';
+  document.getElementById('btn-give-back').style.display =
+    task.status === 'paused' ? 'inline-block' : 'none';
+  document.getElementById('btn-retry').style.display =
+    task.status === 'failed' ? 'inline-block' : 'none';
 }
 
 document.getElementById('detail-close').addEventListener('click', closeDetail);
 
 document.getElementById('btn-stop').addEventListener('click', () => {
   if (activeTaskId) socket.emit('stop_task', { id: activeTaskId });
+});
+
+document.getElementById('btn-take-wheel-detail').addEventListener('click', () => {
+  if (activeTaskId) socket.emit('pause_task', { id: activeTaskId });
+});
+
+document.getElementById('btn-give-back').addEventListener('click', () => {
+  if (activeTaskId) socket.emit('resume_task', { id: activeTaskId });
 });
 
 document.getElementById('btn-retry').addEventListener('click', () => {
@@ -1002,6 +1220,69 @@ document.getElementById('btn-copy-report').addEventListener('click', () => {
       btn.classList.remove('copied');
     }, 1500);
   });
+});
+
+// ── Interactive browser control (manual mode) ──────────────
+document.getElementById('live-screenshot').addEventListener('click', (e) => {
+  const task = activeTaskId ? taskMap[activeTaskId] : null;
+  if (!task || task.status !== 'paused') return;
+
+  const rect = e.target.getBoundingClientRect();
+  // Map displayed image coordinates to browser viewport (1280×800)
+  const scaleX = 1280 / rect.width;
+  const scaleY = 800 / rect.height;
+  const x = Math.round((e.clientX - rect.left) * scaleX);
+  const y = Math.round((e.clientY - rect.top) * scaleY);
+
+  socket.emit('browser_mouse', { id: activeTaskId, x, y });
+
+  // Focus the keyboard input so user can type immediately after clicking
+  document.getElementById('keyboard-input').focus();
+});
+
+// Scroll on the screenshot while paused
+document.getElementById('live-screenshot').addEventListener('wheel', (e) => {
+  const task = activeTaskId ? taskMap[activeTaskId] : null;
+  if (!task || task.status !== 'paused') return;
+  e.preventDefault();
+  socket.emit('browser_key', {
+    id: activeTaskId,
+    key: e.deltaY > 0 ? 'ArrowDown' : 'ArrowUp',
+  });
+}, { passive: false });
+
+// Keyboard input bar — send typed text character by character
+const keyboardInput = document.getElementById('keyboard-input');
+
+keyboardInput.addEventListener('keydown', (e) => {
+  const task = activeTaskId ? taskMap[activeTaskId] : null;
+  if (!task || task.status !== 'paused') return;
+
+  // Special keys
+  const specials = ['Enter', 'Backspace', 'Delete', 'Tab', 'Escape',
+                    'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+  if (specials.includes(e.key)) {
+    e.preventDefault();
+    socket.emit('browser_key', { id: activeTaskId, key: e.key });
+    return;
+  }
+
+  // Ctrl/Cmd shortcuts (copy, paste, etc.)
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    socket.emit('browser_key', { id: activeTaskId, key: e.key });
+    return;
+  }
+});
+
+keyboardInput.addEventListener('input', (e) => {
+  const task = activeTaskId ? taskMap[activeTaskId] : null;
+  if (!task || task.status !== 'paused') return;
+  const text = keyboardInput.value;
+  if (text.length > 0) {
+    socket.emit('browser_key', { id: activeTaskId, text });
+    keyboardInput.value = '';
+  }
 });
 
 // ── Accounts Modal ────────────────────────────────────────
@@ -1102,7 +1383,7 @@ document.getElementById('btn-save-account').addEventListener('click', async () =
   }
 });
 
-// Populate domain list on load so the task modal has options
+// Populate domain list on load
 fetch('/cookies').then(r => r.json()).then(d => populateCookieDomainSelect(d.domains || []));
 
 // ── Sidebar controls ───────────────────────────────────────
@@ -1162,7 +1443,8 @@ document.addEventListener('keydown', e => {
     closeDetail();
     closeAccounts();
   }
-  if (e.key === 'n' && !e.metaKey && !e.ctrlKey && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
+  if (e.key === 'n' && !e.metaKey && !e.ctrlKey &&
+      e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
     openModal();
   }
 });
@@ -1176,7 +1458,7 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-// ── Init empty columns ─────────────────────────────────────
+// ── Init ───────────────────────────────────────────────────
 updateCounts();
 </script>
 </body>

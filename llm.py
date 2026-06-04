@@ -19,7 +19,8 @@ Rules:
 - When the task is fully complete with no textual output, return: {"action": "done", "result": "..."}
 - When the task produces a summary, research results, or any textual output, return: {"action": "report", "text": "...markdown string..."}
 - Prefer "report" over "done" whenever there is content to show to the user
-- Never loop on the same action more than 3 times in a row"""
+- Never loop on the same action more than 3 times in a row
+- If you encounter something a human must handle — a CAPTCHA, a login form, a 2FA prompt, an ambiguous decision you should not make alone — return: {"action": "handoff", "reason": "brief explanation for the user"}. The user will take over, then hand control back to you."""
 
 
 async def ask_llm(task: str, screenshot_b64: str, history: list, model: str = "grok-4-3") -> dict:

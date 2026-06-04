@@ -17,6 +17,11 @@ tasks = {}  # task_id -> task state dict
 running_semaphore = threading.Semaphore(2)  # max 2 parallel tasks
 
 
+def task_public(task):
+    """Return only JSON-serializable fields for client emission."""
+    return {k: v for k, v in task.items() if not k.startswith("_")}
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -45,11 +50,12 @@ def remove_cookies(domain):
 
 @socketio.on("connect")
 def handle_connect():
-    emit("all_tasks", list(tasks.values()))
+    emit("all_tasks", [task_public(t) for t in tasks.values()])
+
 
 @socketio.on("get_all_tasks")
 def handle_get_all_tasks():
-    emit("all_tasks", list(tasks.values()))
+    emit("all_tasks", [task_public(t) for t in tasks.values()])
 
 
 @socketio.on("create_task")
@@ -70,10 +76,16 @@ def handle_create_task(data):
         "result": None,
         "report": None,
         "error": None,
+        "handoff_reason": None,
         "started_at": None,
+        # Internal — stripped before sending to client
+        "_pause_flag": {"paused": False, "abort": False},
+        "_resume_event": threading.Event(),
+        "_browser_ref": None,
+        "_event_loop": None,
     }
     tasks[task_id] = task
-    socketio.emit("task_update", task)
+    socketio.emit("task_update", task_public(task))
 
     thread = threading.Thread(target=run_task_thread, args=(task_id,), daemon=True)
     thread.start()
@@ -83,10 +95,69 @@ def handle_create_task(data):
 def handle_stop_task(data):
     task_id = data.get("id")
     task = tasks.get(task_id)
-    if task and task["status"] == "running":
+    if task and task["status"] in ("running", "paused"):
         task["status"] = "failed"
         task["error"] = "Stopped by user."
-        socketio.emit("task_update", task)
+        # Unblock the agent loop if it is waiting in a pause
+        pause_flag = task.get("_pause_flag")
+        resume_event = task.get("_resume_event")
+        if pause_flag and resume_event:
+            pause_flag["abort"] = True
+            resume_event.set()
+        socketio.emit("task_update", task_public(task))
+
+
+@socketio.on("pause_task")
+def handle_pause_task(data):
+    task_id = data.get("id")
+    task = tasks.get(task_id)
+    if task and task["status"] == "running":
+        task["_pause_flag"]["paused"] = True
+        # Status update is emitted by the agent loop when it enters the paused wait
+
+
+@socketio.on("resume_task")
+def handle_resume_task(data):
+    task_id = data.get("id")
+    task = tasks.get(task_id)
+    if task and task["status"] == "paused":
+        task["_pause_flag"]["paused"] = False
+        resume_event = task.get("_resume_event")
+        if resume_event:
+            resume_event.set()
+        # Status is set back to "running" by the agent loop's on_resumed callback
+
+
+@socketio.on("browser_mouse")
+def handle_browser_mouse(data):
+    task_id = data.get("id")
+    task = tasks.get(task_id)
+    if not task or task["status"] != "paused":
+        return
+    browser = task.get("_browser_ref")
+    loop = task.get("_event_loop")
+    if browser and loop and loop.is_running():
+        asyncio.run_coroutine_threadsafe(
+            browser.click_coordinates(int(data["x"]), int(data["y"])), loop
+        )
+
+
+@socketio.on("browser_key")
+def handle_browser_key(data):
+    task_id = data.get("id")
+    task = tasks.get(task_id)
+    if not task or task["status"] != "paused":
+        return
+    browser = task.get("_browser_ref")
+    loop = task.get("_event_loop")
+    if not (browser and loop and loop.is_running()):
+        return
+    text = data.get("text")
+    key = data.get("key")
+    if text:
+        asyncio.run_coroutine_threadsafe(browser.type_keys(text), loop)
+    elif key:
+        asyncio.run_coroutine_threadsafe(browser.press_key(key), loop)
 
 
 @socketio.on("retry_task")
@@ -112,10 +183,15 @@ def handle_retry_task(data):
         "result": None,
         "report": None,
         "error": None,
+        "handoff_reason": None,
         "started_at": None,
+        "_pause_flag": {"paused": False, "abort": False},
+        "_resume_event": threading.Event(),
+        "_browser_ref": None,
+        "_event_loop": None,
     }
     tasks[new_id] = task
-    socketio.emit("task_update", task)
+    socketio.emit("task_update", task_public(task))
 
     thread = threading.Thread(target=run_task_thread, args=(new_id,), daemon=True)
     thread.start()
@@ -131,7 +207,7 @@ def run_task_thread(task_id: str):
 
         task["status"] = "running"
         task["started_at"] = time.time()
-        socketio.emit("task_update", task)
+        socketio.emit("task_update", task_public(task))
 
         def on_step(step_num, action, screenshot_b64):
             if task["status"] != "running":
@@ -143,30 +219,53 @@ def run_task_thread(task_id: str):
             })
             task["screenshot"] = screenshot_b64
             task["elapsed"] = round(time.time() - task["started_at"], 1)
-            socketio.emit("task_update", task)
+            socketio.emit("task_update", task_public(task))
 
         def on_done(result):
             task["status"] = "done"
             task["result"] = result
             task["elapsed"] = round(time.time() - task["started_at"], 1)
-            socketio.emit("task_update", task)
+            socketio.emit("task_update", task_public(task))
 
         def on_report(report_text):
             task["status"] = "done"
             task["report"] = report_text
             task["result"] = "Report generated."
             task["elapsed"] = round(time.time() - task["started_at"], 1)
-            socketio.emit("task_update", task)
+            socketio.emit("task_update", task_public(task))
 
         def on_error(error):
-            if task["status"] == "running":
+            if task["status"] in ("running", "paused"):
                 task["status"] = "failed"
                 task["error"] = str(error)
                 task["elapsed"] = round(time.time() - task["started_at"], 1)
-                socketio.emit("task_update", task)
+                socketio.emit("task_update", task_public(task))
 
         def on_screenshot(screenshot_b64):
             socketio.emit("screenshot_update", {"id": task_id, "screenshot": screenshot_b64})
+
+        async def on_paused(browser):
+            task["_browser_ref"] = browser
+            task["_event_loop"] = asyncio.get_event_loop()
+            task["status"] = "paused"
+            task["elapsed"] = round(time.time() - task["started_at"], 1)
+            socketio.emit("task_update", task_public(task))
+
+        async def on_resumed(browser):
+            task["_browser_ref"] = None
+            task["_event_loop"] = None
+            task["handoff_reason"] = None
+            task["status"] = "running"
+            task["elapsed"] = round(time.time() - task["started_at"], 1)
+            socketio.emit("task_update", task_public(task))
+
+        async def on_handoff(browser, reason):
+            task["_browser_ref"] = browser
+            task["_event_loop"] = asyncio.get_event_loop()
+            task["handoff_reason"] = reason
+            task["status"] = "paused"
+            task["elapsed"] = round(time.time() - task["started_at"], 1)
+            socketio.emit("task_update", task_public(task))
 
         asyncio.run(run_agent_with_callbacks(
             task=task["description"],
@@ -178,6 +277,11 @@ def run_task_thread(task_id: str):
             on_report=on_report,
             on_error=on_error,
             on_screenshot=on_screenshot,
+            pause_flag=task["_pause_flag"],
+            resume_event=task["_resume_event"],
+            on_paused=on_paused,
+            on_resumed=on_resumed,
+            on_handoff=on_handoff,
         ))
     finally:
         running_semaphore.release()

@@ -21,15 +21,16 @@ Rules:
   - {"action": "wait", "ms": 1000}
   - {"action": "extract", "selector": "main", "description": "page text"}
   - {"action": "screenshot"}
-  - {"action": "done"}
   - {"action": "report", "text": "...markdown string..."}
+  - {"action": "done"}
   - {"action": "handoff", "reason": "brief explanation for the user"}
 - Prefer readable selectors: button:has-text("Login"), input[placeholder="Search"], a[href*="contact"]
 - If a click didn't work, try a different selector
 - If you're unsure what to do next, take a screenshot first
-- Use {"action": "done"} only when the task is complete and there is no text to show the user.
-- If you need to tell the user what happened, even a one-sentence completion summary, return {"action": "report", "text": "...markdown string..."}.
-- Never put a user-facing summary in done.result; prefer "report" whenever there is content to show to the user.
+- Always finish completed tasks with {"action": "report", "text": "...markdown string..."}.
+- The final report must briefly say what you did, even for simple click/navigation tasks.
+- Do not use {"action": "done"} for normal completion; it is only a fallback if reporting is impossible.
+- Never put a user-facing summary in done.result.
 - Never loop on the same action more than 3 times in a row
 - If you encounter something a human must handle — a CAPTCHA, a login form, a 2FA prompt, an ambiguous decision you should not make alone — return: {"action": "handoff", "reason": "brief explanation for the user"}. The user will take over, then hand control back to you."""
 

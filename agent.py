@@ -4,14 +4,22 @@ from llm import ask_llm
 from actions import execute_action
 from config import MAX_STEPS
 
-SHORT_DONE_RESULTS = {"", "done", "complete", "completed", "ok", "success", "finished"}
 
-
-def _done_result_as_report(action: dict) -> str | None:
+def _completion_report(action: dict, history: list) -> str:
     result = str(action.get("result", "")).strip()
-    if result.lower().rstrip(".!") in SHORT_DONE_RESULTS:
-        return None
-    return result or None
+    lines = [result or "Task completed."]
+
+    completed_steps = [
+        str(item.get("result", "")).strip()
+        for item in history
+        if str(item.get("result", "")).strip()
+    ]
+    if completed_steps:
+        lines.append("")
+        lines.append("Actions performed:")
+        lines.extend(f"- {step}" for step in completed_steps)
+
+    return "\n".join(lines)
 
 
 async def run_agent(task: str):
@@ -25,11 +33,7 @@ async def run_agent(task: str):
             print(f"[Step {step + 1}] {action}")
 
             if action.get("action") == "done":
-                report_text = _done_result_as_report(action)
-                if report_text:
-                    print(f"\nReport:\n{report_text}")
-                    return
-                print(f"\n✅ Done: {action.get('result')}")
+                print(f"\nReport:\n{_completion_report(action, history)}")
                 return
 
             result = await execute_action(browser, action)
@@ -92,9 +96,8 @@ async def run_agent_with_callbacks(
                     on_step(step + 1, action, screenshot_b64)
 
                 if action.get("action") == "done":
-                    report_text = _done_result_as_report(action)
-                    if report_text and on_report:
-                        on_report(report_text)
+                    if on_report:
+                        on_report(_completion_report(action, history))
                     elif on_done:
                         on_done(action.get("result", ""))
                     return

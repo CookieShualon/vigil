@@ -34,7 +34,7 @@ The dashboard at `http://localhost:5000` provides:
 - **Task detail panel** — click any card to open a slide-in panel with:
   - Full action history with timestamps
   - Live browser screenshot (updates every 500ms via SocketIO)
-  - Markdown report (if the agent returned one), with a Copy button
+  - Markdown completion report with a Copy button
   - Stop button (running/paused tasks) and Retry button (failed tasks)
 - **Parallel execution** — up to 2 tasks run simultaneously; the rest queue
 - **Drag to re-queue** — drag a Failed card onto the Queue column to retry
@@ -106,7 +106,9 @@ Take the Wheel is built entirely on Playwright's native input APIs (`page.mouse`
 3. LLM returns a single JSON action
 4. Action is executed in Playwright
 5. A background stream captures screenshots every 500ms and pushes them to the UI via `screenshot_update` SocketIO events
-6. Repeat until `{"action": "done"}`, `{"action": "report", "text": "..."}`, or max steps is reached
+6. Repeat until `{"action": "report", "text": "..."}` or max steps is reached
+
+Completed tasks always produce a markdown report, even for simple tasks. The report briefly says what the agent did and is rendered in the task detail panel. `done` is kept only as a compatibility fallback; if a model returns it, the agent converts the completion into a report using the recorded action history.
 
 ## Account / Cookie Management
 
@@ -156,11 +158,11 @@ Cookies are stored locally at `./data/cookies/{domain}.json` and are excluded fr
 | `wait`       | `ms`                             |          |
 | `extract`    | `selector`, `description`        |          |
 | `screenshot` | _(no fields — retakes snapshot)_ |          |
-| `done`       | `result`                         | yes      |
+| `done`       | _(compatibility fallback only)_  | yes      |
 | `report`     | `text` (markdown string)         | yes      |
 | `handoff`    | `reason`                         | yes*     |
 
-`report` is preferred over `done` when the task has textual output to show (summaries, research results, scraped data, etc.). The markdown is rendered in the task detail panel.
+`report` is the normal completion action for every successful task. The markdown is rendered in the task detail panel and should briefly say what the agent did. If a model returns `done`, Vigil converts it into a report from the recorded action history.
 
 `handoff` is a soft terminal — the loop pauses and waits for the user to take over, then resumes after control is returned. See [Take the Wheel](#take-the-wheel).
 

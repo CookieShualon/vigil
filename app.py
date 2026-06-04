@@ -8,14 +8,9 @@ from flask import Flask, render_template, jsonify, request
 from flask_socketio import SocketIO, emit
 
 from agent import run_agent_with_callbacks
+from config import DEFAULT_MODEL, SUPPORTED_MODELS
 from cookies import list_domains, load_cookies, save_cookies, delete_cookies
 
-SUPPORTED_MODELS = {
-    "grok-4-3",
-    "gemini-3-5-flash",
-    "claude-opus-4-8",
-    "qwen3-coder-480b-a35b-instruct-turbo",
-}
 MIN_MAX_STEPS = 1
 MAX_MAX_STEPS = 50
 MAX_TASK_LENGTH = 5000
@@ -48,7 +43,7 @@ def validate_task_payload(data):
     if len(description) > MAX_TASK_LENGTH:
         return None, f"Task text must be {MAX_TASK_LENGTH} characters or fewer."
 
-    model = str(data.get("model", "grok-4-3")).strip()
+    model = str(data.get("model", DEFAULT_MODEL)).strip()
     if model not in SUPPORTED_MODELS:
         return None, f"Unsupported model: {model}."
 
@@ -78,6 +73,14 @@ def validate_task_payload(data):
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/config", methods=["GET"])
+def get_config():
+    return jsonify({
+        "models": list(SUPPORTED_MODELS),
+        "default_model": DEFAULT_MODEL,
+    })
 
 
 @app.route("/cookies", methods=["GET"])

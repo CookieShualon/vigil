@@ -3,10 +3,11 @@ import threading
 import time
 import uuid
 
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify, request
 from flask_socketio import SocketIO, emit
 
 from agent import run_agent_with_callbacks
+from cookies import list_domains, load_cookies, save_cookies, delete_cookies
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "browser-agent-secret"
@@ -19,6 +20,27 @@ running_semaphore = threading.Semaphore(2)  # max 2 parallel tasks
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/cookies", methods=["GET"])
+def get_cookies():
+    domains = list_domains()
+    return jsonify({"domains": domains})
+
+
+@app.route("/cookies/<domain>", methods=["POST"])
+def set_cookies(domain):
+    data = request.get_json(force=True)
+    if not isinstance(data, list):
+        return jsonify({"error": "expected a JSON array of cookies"}), 400
+    save_cookies(domain, data)
+    return jsonify({"ok": True, "domain": domain, "count": len(data)})
+
+
+@app.route("/cookies/<domain>", methods=["DELETE"])
+def remove_cookies(domain):
+    removed = delete_cookies(domain)
+    return jsonify({"ok": removed, "domain": domain})
 
 
 @socketio.on("connect")
@@ -38,6 +60,7 @@ def handle_create_task(data):
         "description": data["task"],
         "model": data.get("model", "grok-4-3"),
         "max_steps": int(data.get("max_steps", 20)),
+        "cookie_domain": data.get("cookie_domain") or None,
         "status": "queue",
         "steps": [],
         "step": 0,
@@ -79,6 +102,7 @@ def handle_retry_task(data):
         "description": old["description"],
         "model": old["model"],
         "max_steps": old["max_steps"],
+        "cookie_domain": old.get("cookie_domain"),
         "status": "queue",
         "steps": [],
         "step": 0,
@@ -148,6 +172,7 @@ def run_task_thread(task_id: str):
             task=task["description"],
             model=task["model"],
             max_steps=task["max_steps"],
+            cookie_domain=task.get("cookie_domain"),
             on_step=on_step,
             on_done=on_done,
             on_report=on_report,

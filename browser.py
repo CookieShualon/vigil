@@ -1,16 +1,28 @@
 import asyncio
 import base64
+from urllib.parse import urlparse
 from playwright.async_api import async_playwright, Page, Browser, BrowserContext
 from config import VIEWPORT_WIDTH, VIEWPORT_HEIGHT
+from cookies import load_cookies, save_cookies
+
+
+def _domain_from_url(url: str) -> str | None:
+    try:
+        host = urlparse(url).hostname or ""
+        # strip leading www.
+        return host.removeprefix("www.") if host else None
+    except Exception:
+        return None
 
 
 class BrowserSession:
-    def __init__(self):
+    def __init__(self, cookie_domain: str | None = None):
         self._playwright = None
         self._browser: Browser = None
         self._context: BrowserContext = None
         self.page: Page = None
         self._streaming = False
+        self._cookie_domain = cookie_domain
 
     async def __aenter__(self):
         self._playwright = await async_playwright().start()
@@ -18,6 +30,10 @@ class BrowserSession:
         self._context = await self._browser.new_context(
             viewport={"width": VIEWPORT_WIDTH, "height": VIEWPORT_HEIGHT}
         )
+        if self._cookie_domain:
+            stored = load_cookies(self._cookie_domain)
+            if stored:
+                await self._context.add_cookies(stored)
         self.page = await self._context.new_page()
         await self.page.goto("about:blank")
         self._streaming = True
@@ -25,6 +41,13 @@ class BrowserSession:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         self._streaming = False
+        if self._cookie_domain:
+            try:
+                updated = await self._context.cookies()
+                if updated:
+                    save_cookies(self._cookie_domain, updated)
+            except Exception:
+                pass
         await self._browser.close()
         await self._playwright.stop()
 

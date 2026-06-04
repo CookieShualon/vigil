@@ -30,6 +30,7 @@ async def run_agent_with_callbacks(
     task: str,
     model: str = "grok-4-3",
     max_steps: int = MAX_STEPS,
+    cookie_domain: str | None = None,
     on_step=None,
     on_done=None,
     on_report=None,
@@ -40,7 +41,7 @@ async def run_agent_with_callbacks(
     stream_task = None
 
     try:
-        async with BrowserSession() as browser:
+        async with BrowserSession(cookie_domain=cookie_domain) as browser:
             if on_screenshot:
                 stream_task = asyncio.create_task(
                     browser.start_screenshot_stream(

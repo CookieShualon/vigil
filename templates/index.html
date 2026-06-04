@@ -91,6 +91,21 @@
   }
   #btn-new:hover { opacity: 0.85; }
 
+  #btn-accounts {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  #btn-accounts:hover { border-color: #444; color: var(--text); }
+
   /* ── Main ── */
   #main {
     flex: 1;
@@ -385,6 +400,112 @@
     user-select: none;
   }
 
+  /* ── Accounts Modal ── */
+  #accounts-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  #accounts-overlay.open { display: flex; }
+
+  #accounts-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    width: 520px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow: hidden;
+  }
+  #accounts-modal h2 { font-size: 14px; font-weight: 700; }
+
+  .accounts-hint {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.6;
+    background: var(--surface2);
+    border-radius: 4px;
+    padding: 10px 12px;
+    border-left: 2px solid var(--border);
+  }
+  .accounts-hint code {
+    color: var(--accent);
+    font-family: inherit;
+  }
+
+  #domain-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  #domain-list::-webkit-scrollbar { width: 4px; }
+  #domain-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .domain-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+    border-radius: 4px;
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+  .domain-row span { flex: 1; color: var(--text); }
+  .domain-row .cookie-count { font-size: 10px; color: var(--muted); }
+  .btn-delete-domain {
+    background: none;
+    border: none;
+    color: var(--failed);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+    opacity: 0.6;
+  }
+  .btn-delete-domain:hover { opacity: 1; }
+
+  .no-domains { font-size: 11px; color: var(--muted); text-align: center; padding: 16px 0; }
+
+  #accounts-add {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+  #accounts-add h3 { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+
+  #accounts-add input, #accounts-add textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 7px 9px;
+    border-radius: 4px;
+    width: 100%;
+  }
+  #accounts-add input:focus,
+  #accounts-add textarea:focus { outline: 1px solid var(--accent); }
+  #accounts-add textarea { min-height: 80px; resize: vertical; }
+
+  #accounts-add-status {
+    font-size: 11px;
+    min-height: 14px;
+  }
+  #accounts-add-status.ok { color: var(--done); }
+  #accounts-add-status.err { color: var(--failed); }
+
+  .accounts-footer { display: flex; justify-content: space-between; align-items: center; }
+
   /* ── Report ── */
   #detail-report-wrap {
     display: none;
@@ -455,6 +576,7 @@
   </div>
 
   <button id="btn-new">+ New Task</button>
+  <button id="btn-accounts">Accounts</button>
 </aside>
 
 <!-- Main Board -->
@@ -516,9 +638,41 @@
         </select>
       </div>
     </div>
+    <div class="modal-field" style="margin-top: -4px;">
+      <label>Account (optional)</label>
+      <select id="modal-cookie-domain">
+        <option value="">None</option>
+      </select>
+    </div>
     <div class="modal-actions">
       <button class="btn-cancel" id="btn-cancel">Cancel</button>
       <button class="btn-submit" id="btn-submit">Run Task</button>
+    </div>
+  </div>
+</div>
+
+<!-- Accounts Modal -->
+<div id="accounts-overlay">
+  <div id="accounts-modal">
+    <h2>Accounts</h2>
+    <div class="accounts-hint">
+      Export cookies with <code>Cookie-Editor</code> or <code>EditThisCookie</code> browser extensions.
+      Log in to the site first, then export as JSON and paste below.
+      Vigil will inject these cookies before each task — your password is never shared with the AI.
+    </div>
+    <div>
+      <div class="detail-section-label" style="margin-bottom: 8px;">Saved Accounts</div>
+      <div id="domain-list"></div>
+    </div>
+    <div id="accounts-add">
+      <h3>Add Account</h3>
+      <input type="text" id="add-domain" placeholder="domain  (e.g. github.com)" autocomplete="off" />
+      <textarea id="add-cookies-json" placeholder='Paste cookie JSON array here…&#10;[{"name":"session","value":"abc123","domain":".github.com",...}]'></textarea>
+      <div id="accounts-add-status"></div>
+      <div class="accounts-footer">
+        <button class="btn-cancel" id="accounts-close">Close</button>
+        <button class="btn-submit" id="btn-save-account">Save Account</button>
+      </div>
     </div>
   </div>
 </div>
@@ -850,6 +1004,107 @@ document.getElementById('btn-copy-report').addEventListener('click', () => {
   });
 });
 
+// ── Accounts Modal ────────────────────────────────────────
+const accountsOverlay = document.getElementById('accounts-overlay');
+
+function openAccounts() {
+  loadDomainList();
+  accountsOverlay.classList.add('open');
+}
+
+function closeAccounts() {
+  accountsOverlay.classList.remove('open');
+  document.getElementById('add-domain').value = '';
+  document.getElementById('add-cookies-json').value = '';
+  document.getElementById('accounts-add-status').textContent = '';
+  document.getElementById('accounts-add-status').className = '';
+}
+
+async function loadDomainList() {
+  const res = await fetch('/cookies');
+  const data = await res.json();
+  const list = document.getElementById('domain-list');
+  list.innerHTML = '';
+
+  if (!data.domains || data.domains.length === 0) {
+    list.innerHTML = '<div class="no-domains">No accounts saved yet.</div>';
+    populateCookieDomainSelect([]);
+    return;
+  }
+
+  data.domains.forEach(domain => {
+    const row = document.createElement('div');
+    row.className = 'domain-row';
+    row.innerHTML = `
+      <span>${escHtml(domain)}</span>
+      <button class="btn-delete-domain" data-domain="${escHtml(domain)}" title="Remove">✕</button>
+    `;
+    row.querySelector('.btn-delete-domain').addEventListener('click', async () => {
+      await fetch('/cookies/' + encodeURIComponent(domain), { method: 'DELETE' });
+      loadDomainList();
+    });
+    list.appendChild(row);
+  });
+
+  populateCookieDomainSelect(data.domains);
+}
+
+function populateCookieDomainSelect(domains) {
+  const sel = document.getElementById('modal-cookie-domain');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">None</option>';
+  domains.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d;
+    opt.textContent = d;
+    if (d === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+document.getElementById('btn-accounts').addEventListener('click', openAccounts);
+document.getElementById('accounts-close').addEventListener('click', closeAccounts);
+accountsOverlay.addEventListener('click', e => { if (e.target === accountsOverlay) closeAccounts(); });
+
+document.getElementById('btn-save-account').addEventListener('click', async () => {
+  const domain = document.getElementById('add-domain').value.trim();
+  const raw = document.getElementById('add-cookies-json').value.trim();
+  const status = document.getElementById('accounts-add-status');
+
+  if (!domain) { status.textContent = 'Domain is required.'; status.className = 'err'; return; }
+  if (!raw) { status.textContent = 'Cookie JSON is required.'; status.className = 'err'; return; }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) throw new Error('must be an array');
+  } catch (e) {
+    status.textContent = 'Invalid JSON — must be an array of cookie objects.';
+    status.className = 'err';
+    return;
+  }
+
+  const res = await fetch('/cookies/' + encodeURIComponent(domain), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(parsed),
+  });
+  const data = await res.json();
+  if (data.ok) {
+    status.textContent = `Saved ${data.count} cookie(s) for ${domain}.`;
+    status.className = 'ok';
+    document.getElementById('add-domain').value = '';
+    document.getElementById('add-cookies-json').value = '';
+    loadDomainList();
+  } else {
+    status.textContent = data.error || 'Failed to save.';
+    status.className = 'err';
+  }
+});
+
+// Populate domain list on load so the task modal has options
+fetch('/cookies').then(r => r.json()).then(d => populateCookieDomainSelect(d.domains || []));
+
 // ── Sidebar controls ───────────────────────────────────────
 const stepsSlider = document.getElementById('max-steps');
 const stepsVal = document.getElementById('max-steps-val');
@@ -895,7 +1150,8 @@ function submitTask() {
   if (!task) return;
   const model = document.getElementById('modal-model').value;
   const max_steps = parseInt(document.getElementById('modal-steps').value);
-  socket.emit('create_task', { task, model, max_steps });
+  const cookie_domain = document.getElementById('modal-cookie-domain').value || null;
+  socket.emit('create_task', { task, model, max_steps, cookie_domain });
   closeModal();
 }
 
@@ -904,6 +1160,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closeModal();
     closeDetail();
+    closeAccounts();
   }
   if (e.key === 'n' && !e.metaKey && !e.ctrlKey && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
     openModal();

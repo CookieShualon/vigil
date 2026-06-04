@@ -67,6 +67,10 @@ async def run_agent_with_callbacks(
                         return
                     if on_resumed:
                         await on_resumed(browser)
+                    history.append({
+                        "action": {"action": "user_pause"},
+                        "result": "User paused and has now returned control. Continue the task from the current browser state.",
+                    })
 
                 screenshot_b64 = await browser.screenshot()
                 action = await ask_llm(task, screenshot_b64, history, model=model)
@@ -94,6 +98,10 @@ async def run_agent_with_callbacks(
                             return
                         if on_resumed:
                             await on_resumed(browser)
+                        history.append({
+                            "action": action,
+                            "result": "User took control and has returned it. Continue the task — do not request another handoff for the same situation.",
+                        })
                         continue
                     else:
                         if on_error:

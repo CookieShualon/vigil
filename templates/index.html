@@ -339,10 +339,13 @@
     z-index: 50;
     display: flex;
     flex-direction: column;
-    transition: right 0.25s ease;
+    transition: right 0.25s ease, width 0.25s ease;
     overflow: hidden;
   }
   #detail-panel.open { right: 0; }
+  #detail-panel.panel-paused { width: 700px; }
+  #detail-panel.panel-paused:not(.open) { right: -700px; }
+  #detail-panel.panel-paused #detail-history-section { display: none; }
 
   #detail-header {
     padding: 16px 20px;
@@ -851,7 +854,7 @@
         <input id="keyboard-input" type="text" placeholder="type here…" autocomplete="off" />
       </div>
     </div>
-    <div>
+    <div id="detail-history-section">
       <div class="detail-section-label">Action History</div>
       <div id="detail-history"></div>
     </div>
@@ -1124,14 +1127,17 @@ function renderDetail(task) {
   const bannerText = document.getElementById('handoff-reason-text');
   const isPaused = task.status === 'paused';
 
+  const panel = document.getElementById('detail-panel');
   if (isPaused) {
     wrap.classList.add('interactive');
     badge.style.display = 'block';
     keyboard.classList.add('visible');
+    panel.classList.add('panel-paused');
   } else {
     wrap.classList.remove('interactive');
     badge.style.display = 'none';
     keyboard.classList.remove('visible');
+    panel.classList.remove('panel-paused');
   }
 
   if (isPaused && task.handoff_reason) {

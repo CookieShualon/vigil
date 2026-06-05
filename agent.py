@@ -1,7 +1,7 @@
 import asyncio
 from browser import BrowserSession
 from llm import ask_llm
-from actions import execute_action
+from actions import execute_action, validate_action
 from config import MAX_STEPS
 
 
@@ -29,8 +29,15 @@ async def run_agent(task: str):
         for step in range(MAX_STEPS):
             screenshot_b64 = await browser.screenshot()
             action = await ask_llm(task, screenshot_b64, history)
+            action, validation_error = validate_action(action)
 
             print(f"[Step {step + 1}] {action}")
+
+            if validation_error:
+                result = f"ERROR: {validation_error}"
+                print(f"         → {result}")
+                history.append({"action": action, "result": result})
+                continue
 
             if action.get("action") == "done":
                 print(f"\nReport:\n{_completion_report(action, history)}")
@@ -94,6 +101,14 @@ async def run_agent_with_callbacks(
 
                 if on_step:
                     on_step(step + 1, action, screenshot_b64)
+
+                action, validation_error = validate_action(action)
+                if validation_error:
+                    history.append({
+                        "action": action,
+                        "result": f"ERROR: {validation_error}",
+                    })
+                    continue
 
                 if action.get("action") == "done":
                     if on_report:

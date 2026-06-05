@@ -8,7 +8,12 @@ from flask import Flask, render_template, jsonify, request
 from flask_socketio import SocketIO, emit
 
 from agent import run_agent_with_callbacks
+from config import DEFAULT_MODEL, SUPPORTED_MODELS
 from cookies import list_domains, load_cookies, save_cookies, delete_cookies
+
+MIN_MAX_STEPS = 1
+MAX_MAX_STEPS = 50
+MAX_TASK_LENGTH = 5000
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,9 +33,54 @@ def task_public(task):
     return {k: v for k, v in task.items() if not k.startswith("_")}
 
 
+def validate_task_payload(data):
+    if not isinstance(data, dict):
+        return None, "Task payload must be an object."
+
+    description = str(data.get("task", "")).strip()
+    if not description:
+        return None, "Task text is required."
+    if len(description) > MAX_TASK_LENGTH:
+        return None, f"Task text must be {MAX_TASK_LENGTH} characters or fewer."
+
+    model = str(data.get("model", DEFAULT_MODEL)).strip()
+    if model not in SUPPORTED_MODELS:
+        return None, f"Unsupported model: {model}."
+
+    try:
+        max_steps = int(data.get("max_steps", 20))
+    except (TypeError, ValueError):
+        return None, "max_steps must be a number."
+    if max_steps < MIN_MAX_STEPS or max_steps > MAX_MAX_STEPS:
+        return None, f"max_steps must be between {MIN_MAX_STEPS} and {MAX_MAX_STEPS}."
+
+    cookie_domain = data.get("cookie_domain") or None
+    if cookie_domain is not None:
+        cookie_domain = str(cookie_domain).strip()
+        if not cookie_domain:
+            cookie_domain = None
+        elif cookie_domain not in list_domains():
+            return None, f"Unknown cookie domain: {cookie_domain}."
+
+    return {
+        "description": description,
+        "model": model,
+        "max_steps": max_steps,
+        "cookie_domain": cookie_domain,
+    }, None
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/config", methods=["GET"])
+def get_config():
+    return jsonify({
+        "models": list(SUPPORTED_MODELS),
+        "default_model": DEFAULT_MODEL,
+    })
 
 
 @app.route("/cookies", methods=["GET"])
@@ -66,17 +116,22 @@ def handle_get_all_tasks():
 
 @socketio.on("create_task")
 def handle_create_task(data):
+    validated, error = validate_task_payload(data)
+    if error:
+        emit("create_task_error", {"error": error})
+        return
+
     task_id = str(uuid.uuid4())[:8]
     task = {
         "id": task_id,
-        "description": data["task"],
-        "model": data.get("model", "grok-4-3"),
-        "max_steps": int(data.get("max_steps", 20)),
-        "cookie_domain": data.get("cookie_domain") or None,
+        "description": validated["description"],
+        "model": validated["model"],
+        "max_steps": validated["max_steps"],
+        "cookie_domain": validated["cookie_domain"],
         "status": "queue",
         "steps": [],
         "step": 0,
-        "total_steps": int(data.get("max_steps", 20)),
+        "total_steps": validated["max_steps"],
         "screenshot": None,
         "elapsed": 0,
         "result": None,
@@ -91,6 +146,7 @@ def handle_create_task(data):
         "_event_loop": None,
     }
     tasks[task_id] = task
+    emit("task_created", {"id": task_id})
     socketio.emit("task_update", task_public(task))
 
     thread = threading.Thread(target=run_task_thread, args=(task_id,), daemon=True)

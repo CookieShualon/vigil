@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-22T00:00:00.000Z",
+  "title": "Design System: Vigil",
+  "extensions": {
+    "colorMeta": {
+      "guide-light": {
+        "role": "primary",
+        "displayName": "Guide Light",
+        "canonical": "#c8ff00",
+        "tonalRamp": ["oklch(18% 0.05 128)", "oklch(28% 0.08 128)", "oklch(40% 0.12 128)", "oklch(52% 0.16 128)", "oklch(64% 0.20 128)", "oklch(76% 0.22 128)", "oklch(86% 0.18 128)", "oklch(95% 0.09 128)"]
+      },
+      "graphite-black": {
+        "role": "neutral",
+        "displayName": "Graphite Black",
+        "canonical": "#0a0a0a",
+        "tonalRamp": ["#0a0a0a", "#111111", "#181818", "#222222", "#444444", "#666666", "#aaaaaa", "#e8e8e8"]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Readable Muted Text",
+        "canonical": "#8a8a8a",
+        "tonalRamp": ["#222222", "#444444", "#5f5f5f", "#777777", "#8a8a8a", "#9a9a9a", "#c8c8c8", "#e8e8e8"]
+      },
+      "accent-ink": {
+        "role": "neutral",
+        "displayName": "Accent Ink",
+        "canonical": "#000000",
+        "tonalRamp": ["#000000", "#0a0a0a", "#111111", "#181818", "#222222", "#444444", "#666666", "#8a8a8a"]
+      },
+      "paused": {
+        "role": "secondary",
+        "displayName": "Paused Amber",
+        "canonical": "#f59e0b",
+        "tonalRamp": ["oklch(18% 0.05 70)", "oklch(30% 0.08 70)", "oklch(42% 0.11 70)", "oklch(54% 0.14 70)", "oklch(66% 0.17 70)", "oklch(76% 0.16 70)", "oklch(86% 0.11 70)", "oklch(95% 0.05 70)"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Sidebar Mark", "purpose": "Compact product mark only." },
+      "headline": { "displayName": "Modal Headline", "purpose": "Modal titles and report headings." },
+      "title": { "displayName": "Panel Title", "purpose": "Dense dashboard titles and section headings." },
+      "body": { "displayName": "Operational Body", "purpose": "Readable task descriptions, report prose, and form text." },
+      "label": { "displayName": "System Label", "purpose": "Uppercase labels, metadata, and status headers." }
+    },
+    "shadows": [
+      { "name": "overlay-scrim", "value": "background: rgba(0,0,0,0.7)", "purpose": "Modal focus layer." },
+      { "name": "panel-border", "value": "1px solid var(--border)", "purpose": "Primary depth mechanism for columns, cards, drawers, and modals." }
+    ],
+    "motion": [
+      { "name": "state-fast", "value": "150ms ease", "purpose": "Hover, color, border, and opacity feedback." },
+      { "name": "panel-slide", "value": "250ms ease", "purpose": "Detail drawer opening and paused-state width changes." },
+      { "name": "status-pulse", "value": "1.4s-2s ease-in-out infinite", "purpose": "Running and paused status dots only; provide reduced-motion alternatives when editing." }
+    ],
+    "breakpoints": [
+      { "name": "browser-viewport", "value": "1280px x 800px" },
+      { "name": "paused-panel", "value": "700px" },
+      { "name": "default-detail-panel", "value": "480px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Guide-light primary action for task creation, form submission, and successful control return.",
+      "html": "<button class=\"ds-btn-primary\">Run Task</button>",
+      "css": ".ds-btn-primary { background: var(--accent, #c8ff00); color: #000; border: 0; border-radius: 4px; padding: 8px 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; cursor: pointer; transition: opacity 150ms ease; } .ds-btn-primary:hover { opacity: 0.85; } .ds-btn-primary:focus-visible { outline: 1px solid var(--accent, #c8ff00); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary action for cancellation, accounts access, and quiet controls.",
+      "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
+      "css": ".ds-btn-ghost { background: transparent; color: var(--muted, #666); border: 1px solid var(--border, #222); border-radius: 4px; padding: 8px 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer; transition: border-color 150ms ease, color 150ms ease; } .ds-btn-ghost:hover { border-color: #555; color: var(--text, #e8e8e8); } .ds-btn-ghost:focus-visible { outline: 1px solid var(--accent, #c8ff00); outline-offset: 2px; }"
+    },
+    {
+      "name": "Task Card",
+      "kind": "card",
+      "refersTo": "task-card",
+      "description": "Compact Kanban task unit with status dot, description, metadata, and latest action.",
+      "html": "<article class=\"ds-task-card\"><div class=\"ds-task-card-top\"><span class=\"ds-status-dot\"></span><p>Summarize latest account activity</p></div><div class=\"ds-task-meta\"><span>grok-4-3</span><strong>step 4 / 20</strong></div><div class=\"ds-task-log\">→ {\"action\":\"click\"}</div></article>",
+      "css": ".ds-task-card { background: var(--surface, #111); color: var(--text, #e8e8e8); border: 1px solid var(--border, #222); border-radius: 6px; padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 12px; transition: border-color 150ms ease; } .ds-task-card:hover { border-color: #444; } .ds-task-card-top { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; } .ds-task-card-top p { margin: 0; line-height: 1.4; } .ds-status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--running, #3b82f6); flex: 0 0 auto; margin-top: 3px; } .ds-task-meta { display: flex; justify-content: space-between; color: var(--muted, #666); font-size: 10px; margin-bottom: 6px; } .ds-task-meta strong { color: var(--accent, #c8ff00); font-weight: 400; } .ds-task-log { border-top: 1px solid var(--border, #222); padding-top: 6px; color: #aaa; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Graphite input for task prompts, domains, cookie JSON, and manual keyboard control.",
+      "html": "<label class=\"ds-field\"><span>Task</span><textarea placeholder=\"Describe what the browser should do...\"></textarea></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 6px; color: var(--muted, #666); font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; } .ds-field textarea { min-height: 80px; resize: vertical; background: var(--surface2, #181818); border: 1px solid var(--border, #222); color: var(--text, #e8e8e8); border-radius: 4px; padding: 10px; font: 400 13px/1.5 'JetBrains Mono', monospace; } .ds-field textarea::placeholder { color: #8a8a8a; } .ds-field textarea:focus { outline: 1px solid var(--accent, #c8ff00); }"
+    },
+    {
+      "name": "Manual Control Banner",
+      "kind": "custom",
+      "refersTo": "paused",
+      "description": "Amber intervention state for handoff reason and manual browser control.",
+      "html": "<div class=\"ds-handoff\"><strong>Agent needs your help</strong><span>Login form detected. Take control, sign in, then give back control.</span></div>",
+      "css": ".ds-handoff { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.35); color: var(--text, #e8e8e8); border-radius: 4px; padding: 10px 12px; font: 400 11px/1.5 'JetBrains Mono', monospace; display: grid; gap: 2px; } .ds-handoff strong { color: var(--paused, #f59e0b); font-weight: 700; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Soft Control Room",
+    "overview": "Vigil's interface is an operator room for autonomous browser work: dark, dense, and precise, but not hostile. The system uses compact mono typography, quiet graphite surfaces, and one rare guide-light accent to keep attention on task state, live browser evidence, and the next available intervention. The design should preserve the existing operational efficiency while softening intimidation. It rejects black-box terminal theatrics, decorative SaaS gloss, and vague status presentation.",
+    "keyCharacteristics": [
+      "Compact five-column workflow with persistent task state.",
+      "Dark tonal surfaces separated by thin borders rather than heavy shadows.",
+      "Rare neon-lime action color reserved for primary actions, active values, and reports.",
+      "Semantic status colors for task lifecycle and human handoff.",
+      "Mono-forward typography that reads as transparent and inspectable."
+    ],
+    "rules": [
+      { "name": "The Guide-Light Rarity Rule", "body": "The primary accent should occupy less than 10% of any screen. If everything glows, nothing is actionable.", "section": "colors" },
+      { "name": "The State Color Rule", "body": "Blue, amber, green, red, and queue gray are semantic colors, not decoration. Do not reuse them for unrelated emphasis.", "section": "colors" },
+      { "name": "The Mono Transparency Rule", "body": "Use JetBrains Mono across UI labels, controls, and data so agent actions feel inspectable. Do not introduce display fonts into product controls.", "section": "typography" },
+      { "name": "The Compact Scale Rule", "body": "Product UI headings stay fixed-size and compact. Do not use fluid hero typography in the dashboard.", "section": "typography" },
+      { "name": "The Flat-Until-Focused Rule", "body": "Surfaces are flat at rest. Lift is allowed only when the user is focused on a modal, drawer, or manual-control state.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do preserve the Soft Control Room posture: operational, calm, and readable under task pressure.",
+      "Do use Guide Light sparingly for primary action, focus, and completion/report emphasis.",
+      "Do keep task lifecycle colors semantic and consistent across dots, labels, banners, and buttons.",
+      "Do maintain visible focus states on every control, especially modal fields and manual-control inputs.",
+      "Do use empty states and error copy to explain what the operator can do next."
+    ],
+    "donts": [
+      "Don't create an intimidating black-box terminal aesthetic; the UI is for AI operators, not only low-level debuggers.",
+      "Don't add generic bright SaaS polish, gradient text, glassmorphism, or decorative metrics.",
+      "Don't hide important state transitions behind vague labels or color-only cues.",
+      "Don't use colored side-stripe borders wider than 1px as accents on cards, callouts, or alerts.",
+      "Don't introduce display fonts, large fluid headings, or marketing-page hero patterns inside the dashboard."
+    ]
+  }
+}

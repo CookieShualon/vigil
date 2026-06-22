@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Vigil</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -19,13 +19,36 @@
     --surface2: #181818;
     --border: #222222;
     --text: #e8e8e8;
-    --muted: #666666;
+    --muted: #8a8a8a;
+    --placeholder: #9a9a9a;
+    --subtle: #5f5f5f;
     --accent: #c8ff00;
+    --accent-ink: #000000;
     --running: #3b82f6;
     --done: #22c55e;
     --failed: #ef4444;
     --queue: #888888;
     --paused: #f59e0b;
+    --hover-border: #444444;
+    --hover-border-strong: #555555;
+    --overlay: rgba(0, 0, 0, 0.7);
+    --code-bg: #1e1e1e;
+    --danger-bg: rgba(239, 68, 68, 0.08);
+    --danger-border: rgba(239, 68, 68, 0.28);
+    --danger-hover: rgba(239, 68, 68, 0.25);
+    --paused-bg: rgba(245, 158, 11, 0.12);
+    --paused-bg-strong: rgba(245, 158, 11, 0.25);
+    --paused-border: rgba(245, 158, 11, 0.38);
+    --paused-pulse: rgba(245, 158, 11, 0.4);
+    --paused-pulse-zero: rgba(245, 158, 11, 0);
+    --success-bg: rgba(200, 255, 0, 0.1);
+    --success-bg-strong: rgba(200, 255, 0, 0.2);
+    --success-border: rgba(200, 255, 0, 0.35);
+    --radius-scrollbar: 4px;
+    --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+    --z-drawer: 50;
+    --z-modal-backdrop: 100;
+    --z-badge: 2;
   }
 
   html, body { height: 100%; overflow: hidden; }
@@ -36,6 +59,42 @@
     color: var(--text);
     display: flex;
     font-size: 13px;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  button, select, textarea, input {
+    min-height: 36px;
+  }
+
+  button:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  input:focus-visible,
+  .card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.62;
+  }
+
+  .shortcut-hint {
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.5;
   }
 
   /* ── Sidebar ── */
@@ -79,7 +138,7 @@
 
   #btn-new {
     background: var(--accent);
-    color: #000;
+    color: var(--accent-ink);
     border: none;
     padding: 9px 12px;
     font-family: inherit;
@@ -106,7 +165,7 @@
     text-align: left;
     transition: border-color 0.15s, color 0.15s;
   }
-  #btn-accounts:hover { border-color: #444; color: var(--text); }
+  #btn-accounts:hover { border-color: var(--hover-border); color: var(--text); }
 
   /* ── Main ── */
   #main {
@@ -119,7 +178,7 @@
   #board {
     flex: 1;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(5, minmax(190px, 1fr));
     gap: 0;
     overflow: hidden;
   }
@@ -167,7 +226,7 @@
   }
   .col-body::-webkit-scrollbar { width: 4px; }
   .col-body::-webkit-scrollbar-track { background: transparent; }
-  .col-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  .col-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius-scrollbar); }
 
   /* ── Cards ── */
   .card {
@@ -176,11 +235,11 @@
     border-radius: 6px;
     padding: 12px;
     cursor: pointer;
-    transition: border-color 0.15s, transform 0.15s, opacity 0.15s;
+    transition: border-color 0.15s var(--ease-out-quart), opacity 0.15s var(--ease-out-quart);
     position: relative;
     overflow: hidden;
   }
-  .card:hover { border-color: #444; }
+  .card:hover { border-color: var(--hover-border); }
   .card.dragging { opacity: 0.4; }
   .card.drop-target { border-color: var(--accent); }
 
@@ -200,8 +259,8 @@
     50% { opacity: 0.3; }
   }
   @keyframes pulse-slow {
-    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(245,158,11,0.4); }
-    50% { opacity: 0.6; box-shadow: 0 0 0 4px rgba(245,158,11,0); }
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--paused-pulse); }
+    50% { opacity: 0.6; box-shadow: 0 0 0 4px var(--paused-pulse-zero); }
   }
 
   .card-desc {
@@ -234,7 +293,7 @@
     padding-top: 6px;
     margin-top: 2px;
   }
-  .card-log.has-log { color: #aaa; }
+  .card-log.has-log { color: var(--placeholder); }
 
   .card-elapsed {
     font-size: 10px;
@@ -246,8 +305,8 @@
 
   /* Take the Wheel button on cards */
   .btn-take-wheel {
-    background: rgba(245,158,11,0.12);
-    border: 1px solid rgba(245,158,11,0.35);
+    background: var(--paused-bg);
+    border: 1px solid var(--paused-border);
     color: var(--paused);
     font-family: inherit;
     font-size: 9px;
@@ -260,14 +319,14 @@
     flex-shrink: 0;
     transition: background 0.15s;
   }
-  .btn-take-wheel:hover { background: rgba(245,158,11,0.25); }
+  .btn-take-wheel:hover { background: var(--paused-bg-strong); }
 
   /* ── Modal ── */
   #modal-overlay {
     display: none;
     position: fixed; inset: 0;
-    background: rgba(0,0,0,0.7);
-    z-index: 100;
+    background: var(--overlay);
+    z-index: var(--z-modal-backdrop);
     align-items: center;
     justify-content: center;
   }
@@ -278,7 +337,9 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 24px;
-    width: 480px;
+    width: min(480px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    overflow: auto;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -302,14 +363,22 @@
   .modal-row { display: flex; gap: 12px; }
   .modal-field { flex: 1; display: flex; flex-direction: column; gap: 6px; }
   .modal-field label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+  .modal-field-account { margin-top: -4px; }
 
   .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+  .modal-actions .shortcut-hint { margin-right: auto; align-self: center; }
 
   #modal-error {
     display: none;
     color: var(--failed);
     font-size: 11px;
     line-height: 1.5;
+  }
+
+  #task-input[aria-invalid="true"],
+  #add-domain[aria-invalid="true"],
+  #add-cookies-json[aria-invalid="true"] {
+    border-color: var(--failed);
   }
 
   .btn-cancel {
@@ -322,11 +391,11 @@
     border-radius: 4px;
     cursor: pointer;
   }
-  .btn-cancel:hover { border-color: #555; color: var(--text); }
+  .btn-cancel:hover { border-color: var(--hover-border-strong); color: var(--text); }
 
   .btn-submit {
     background: var(--accent);
-    color: #000;
+    color: var(--accent-ink);
     border: none;
     font-family: inherit;
     font-size: 12px;
@@ -340,19 +409,19 @@
   /* ── Detail Panel ── */
   #detail-panel {
     position: fixed;
-    top: 0; right: -480px;
-    width: 480px; height: 100%;
+    top: 0; right: 0;
+    width: min(480px, 100vw); height: 100%;
     background: var(--surface);
     border-left: 1px solid var(--border);
-    z-index: 50;
+    z-index: var(--z-drawer);
     display: flex;
     flex-direction: column;
-    transition: right 0.25s ease, width 0.25s ease;
+    transform: translateX(100%);
+    transition: transform 0.25s var(--ease-out-quart);
     overflow: hidden;
   }
-  #detail-panel.open { right: 0; }
-  #detail-panel.panel-paused { width: 700px; }
-  #detail-panel.panel-paused:not(.open) { right: -700px; }
+  #detail-panel.open { transform: translateX(0); }
+  #detail-panel.panel-paused { width: min(700px, 100vw); }
   #detail-panel.panel-paused #detail-history-section { display: none; }
 
   #detail-header {
@@ -373,7 +442,7 @@
 
   #detail-body { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
   #detail-body::-webkit-scrollbar { width: 4px; }
-  #detail-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  #detail-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius-scrollbar); }
 
   .detail-section-label {
     font-size: 10px; color: var(--muted);
@@ -414,7 +483,7 @@
   }
 
   #no-screenshot {
-    text-align: center; color: #444; font-size: 12px; padding: 40px;
+    text-align: center; color: var(--muted); font-size: 12px; padding: 40px;
   }
 
   /* Manual control overlay badge */
@@ -422,22 +491,22 @@
     display: none;
     position: absolute;
     top: 8px; left: 8px;
-    background: rgba(245,158,11,0.9);
-    color: #000;
+    background: var(--paused);
+    color: var(--accent-ink);
     font-size: 9px;
     font-weight: 700;
     letter-spacing: 0.1em;
     padding: 3px 8px;
     border-radius: 3px;
     pointer-events: none;
-    z-index: 2;
+    z-index: var(--z-badge);
   }
 
   /* Agent-requested handoff reason banner */
   #handoff-banner {
     display: none;
-    background: rgba(245,158,11,0.1);
-    border: 1px solid rgba(245,158,11,0.35);
+    background: var(--paused-bg);
+    border: 1px solid var(--paused-border);
     border-radius: 4px;
     padding: 10px 12px;
     font-size: 11px;
@@ -464,7 +533,7 @@
 
   #keyboard-input {
     background: var(--surface2);
-    border: 1px solid rgba(245,158,11,0.4);
+    border: 1px solid var(--paused-border);
     color: var(--text);
     font-family: inherit;
     font-size: 12px;
@@ -474,14 +543,14 @@
     outline: none;
   }
   #keyboard-input:focus { border-color: var(--paused); }
-  #keyboard-input::placeholder { color: var(--muted); }
+  #keyboard-input::placeholder { color: var(--placeholder); }
 
   #detail-history {
     display: flex; flex-direction: column; gap: 4px;
     max-height: 300px; overflow-y: auto;
   }
   #detail-history::-webkit-scrollbar { width: 4px; }
-  #detail-history::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  #detail-history::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius-scrollbar); }
 
   .history-row {
     font-size: 11px; color: var(--muted); padding: 4px 8px;
@@ -489,14 +558,16 @@
     display: flex; gap: 8px;
   }
   .history-time { color: var(--accent); flex-shrink: 0; }
-  .history-action { color: #aaa; flex: 1; word-break: break-all; }
+  .history-action { color: var(--placeholder); flex: 1; word-break: break-all; }
 
   #detail-error {
     font-size: 12px; color: var(--failed);
-    background: rgba(239,68,68,0.08); border-radius: 4px;
-    padding: 10px; border: 1px solid rgba(239,68,68,0.2);
+    background: var(--danger-bg); border-radius: 4px;
+    padding: 10px; border: 1px solid var(--danger-border);
     display: none;
   }
+  #detail-error strong { color: var(--text); }
+  #detail-error p { color: var(--text); line-height: 1.6; margin-bottom: 8px; }
 
   #detail-actions {
     display: flex; gap: 10px;
@@ -505,52 +576,54 @@
   }
 
   .btn-stop {
-    background: rgba(239,68,68,0.15); color: var(--failed);
-    border: 1px solid rgba(239,68,68,0.3);
+    background: var(--danger-bg); color: var(--failed);
+    border: 1px solid var(--danger-border);
     font-family: inherit; font-size: 12px; font-weight: 700;
     padding: 8px 16px; border-radius: 4px; cursor: pointer;
   }
-  .btn-stop:hover { background: rgba(239,68,68,0.25); }
+  .btn-stop:hover { background: var(--danger-hover); }
 
   .btn-retry {
-    background: rgba(200,255,0,0.1); color: var(--accent);
-    border: 1px solid rgba(200,255,0,0.3);
+    background: var(--success-bg); color: var(--accent);
+    border: 1px solid var(--success-border);
     font-family: inherit; font-size: 12px; font-weight: 700;
     padding: 8px 16px; border-radius: 4px; cursor: pointer;
   }
-  .btn-retry:hover { background: rgba(200,255,0,0.2); }
+  .btn-retry:hover { background: var(--success-bg-strong); }
 
   /* Take the Wheel / Give Back Control buttons in detail footer */
   #btn-take-wheel-detail {
-    background: rgba(245,158,11,0.12);
+    background: var(--paused-bg);
     color: var(--paused);
-    border: 1px solid rgba(245,158,11,0.35);
+    border: 1px solid var(--paused-border);
     font-family: inherit; font-size: 12px; font-weight: 700;
     padding: 8px 16px; border-radius: 4px; cursor: pointer;
     display: none;
   }
-  #btn-take-wheel-detail:hover { background: rgba(245,158,11,0.25); }
+  #btn-take-wheel-detail:hover { background: var(--paused-bg-strong); }
 
   #btn-give-back {
-    background: rgba(200,255,0,0.1); color: var(--accent);
-    border: 1px solid rgba(200,255,0,0.35);
+    background: var(--success-bg); color: var(--accent);
+    border: 1px solid var(--success-border);
     font-family: inherit; font-size: 12px; font-weight: 700;
     padding: 8px 16px; border-radius: 4px; cursor: pointer;
     display: none;
   }
-  #btn-give-back:hover { background: rgba(200,255,0,0.2); }
+  #btn-give-back:hover { background: var(--success-bg-strong); }
 
   .empty-col {
-    font-size: 11px; color: var(--border); text-align: center; padding-top: 30px;
+    font-size: 11px; color: var(--muted); text-align: left; padding: 24px 8px;
+    line-height: 1.6;
     user-select: none;
   }
+  .empty-col strong { display: block; color: var(--text); font-size: 12px; margin-bottom: 4px; }
 
   /* ── Accounts Modal ── */
   #accounts-overlay {
     display: none;
     position: fixed; inset: 0;
-    background: rgba(0,0,0,0.7);
-    z-index: 100;
+    background: var(--overlay);
+    z-index: var(--z-modal-backdrop);
     align-items: center;
     justify-content: center;
   }
@@ -561,7 +634,7 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 24px;
-    width: 520px;
+    width: min(520px, calc(100vw - 32px));
     max-height: 80vh;
     display: flex;
     flex-direction: column;
@@ -577,7 +650,7 @@
     background: var(--surface2);
     border-radius: 4px;
     padding: 10px 12px;
-    border-left: 2px solid var(--border);
+    border: 1px solid var(--border);
   }
   .accounts-hint code {
     color: var(--accent);
@@ -592,7 +665,7 @@
     overflow-y: auto;
   }
   #domain-list::-webkit-scrollbar { width: 4px; }
-  #domain-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  #domain-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: var(--radius-scrollbar); }
 
   .domain-row {
     display: flex;
@@ -612,12 +685,14 @@
     cursor: pointer;
     font-size: 14px;
     line-height: 1;
-    padding: 0 2px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0 6px;
     opacity: 0.6;
   }
   .btn-delete-domain:hover { opacity: 1; }
 
-  .no-domains { font-size: 11px; color: var(--muted); text-align: center; padding: 16px 0; }
+  .no-domains { font-size: 11px; color: var(--muted); text-align: center; padding: 16px 0; line-height: 1.6; }
 
   #accounts-add {
     display: flex;
@@ -645,6 +720,7 @@
   #accounts-add-status {
     font-size: 11px;
     min-height: 14px;
+    line-height: 1.5;
   }
   #accounts-add-status.ok { color: var(--done); }
   #accounts-add-status.err { color: var(--failed); }
@@ -680,35 +756,81 @@
   #detail-report ul, #detail-report ol { padding-left: 18px; margin: 0 0 8px; }
   #detail-report li { margin-bottom: 3px; }
   #detail-report code {
-    background: #1e1e1e; border-radius: 3px; padding: 1px 5px;
-    font-family: inherit; font-size: 11px; color: #c8ff00;
+    background: var(--code-bg); border-radius: 3px; padding: 1px 5px;
+    font-family: inherit; font-size: 11px; color: var(--accent);
   }
   #detail-report pre {
-    background: #1e1e1e; border-radius: 4px; padding: 10px;
+    background: var(--code-bg); border-radius: 4px; padding: 10px;
     overflow-x: auto; margin: 0 0 8px;
   }
   #detail-report pre code { background: none; padding: 0; }
   #detail-report a { color: var(--running); }
-  #detail-report strong { color: #fff; }
+  #detail-report strong { color: var(--text); }
   #detail-report blockquote {
-    border-left: 2px solid var(--border); padding-left: 10px;
-    color: var(--muted); margin: 0 0 8px;
+    border: 1px solid var(--border); border-radius: 4px; padding: 8px 10px;
+    color: var(--muted); margin: 0 0 8px; background: var(--surface);
+  }
+
+  @media (max-width: 1100px) {
+    #board {
+      overflow-x: auto;
+      grid-template-columns: repeat(5, minmax(240px, 1fr));
+      scroll-snap-type: x proximity;
+    }
+    .column { scroll-snap-align: start; }
+  }
+
+  @media (max-width: 760px) {
+    html, body { overflow: auto; }
+    body { min-height: 100%; flex-direction: column; }
+    #sidebar {
+      width: 100%;
+      min-width: 0;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      padding: max(14px, env(safe-area-inset-top)) 14px 14px;
+      gap: 14px;
+    }
+    #main { min-height: 68vh; overflow: visible; }
+    #board { min-height: 68vh; }
+    .modal-row { flex-direction: column; }
+    #modal, #accounts-modal { width: calc(100vw - 24px); max-height: calc(100vh - 24px); padding: 18px; }
+    #detail-panel { width: 100vw; }
+    #detail-panel.panel-paused { width: 100vw; }
+    #detail-actions { flex-wrap: wrap; }
+  }
+
+  @media (pointer: coarse) {
+    button, select, input, textarea { min-height: 44px; }
+    .btn-delete-domain { min-width: 44px; min-height: 44px; }
+    .btn-take-wheel { padding: 8px 10px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 </style>
 </head>
 <body>
+
+<div id="status-live" class="sr-only" aria-live="polite"></div>
 
 <!-- Sidebar -->
 <aside id="sidebar">
   <h1>Vigil</h1>
 
   <div class="sidebar-section">
-    <span class="sidebar-label">Model</span>
+    <label class="sidebar-label" for="model-select">Model</label>
     <select id="model-select"></select>
   </div>
 
   <div class="sidebar-section">
-    <span class="sidebar-label">Max Steps</span>
+    <label class="sidebar-label" for="max-steps">Max Steps</label>
     <div class="range-row">
       <input type="range" id="max-steps" min="5" max="50" value="20" />
       <span class="range-val" id="max-steps-val">20</span>
@@ -716,6 +838,7 @@
   </div>
 
   <button id="btn-new">+ New Task</button>
+  <p class="shortcut-hint">Shortcut: press N anywhere on the board.</p>
   <button id="btn-accounts">Accounts</button>
 </aside>
 
@@ -761,17 +884,19 @@
 </main>
 
 <!-- New Task Modal -->
-<div id="modal-overlay">
-  <div id="modal">
-    <h2>New Task</h2>
-    <textarea id="task-input" placeholder="Describe what the browser should do…" autofocus></textarea>
+<div id="modal-overlay" aria-hidden="true">
+  <div id="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-describedby="modal-help">
+    <h2 id="modal-title">New Task</h2>
+    <p id="modal-help" class="sr-only">Describe the browser automation task, then choose a model, maximum step count, and optional saved account.</p>
+    <label class="sr-only" for="task-input">Task description</label>
+    <textarea id="task-input" placeholder="Describe what the browser should do…" autofocus required></textarea>
     <div class="modal-row">
       <div class="modal-field">
-        <label>Model</label>
+        <label for="modal-model">Model</label>
         <select id="modal-model"></select>
       </div>
       <div class="modal-field">
-        <label>Max Steps</label>
+        <label for="modal-steps">Max Steps</label>
         <select id="modal-steps">
           <option value="10">10</option>
           <option value="20" selected>20</option>
@@ -780,14 +905,19 @@
         </select>
       </div>
     </div>
-    <div class="modal-field" style="margin-top: -4px;">
-      <label>Account (optional)</label>
+    <div class="modal-field modal-field-account">
+      <label for="modal-cookie-domain">Account (optional)</label>
       <select id="modal-cookie-domain">
         <option value="">None</option>
       </select>
     </div>
-    <div id="modal-error"></div>
+    <div id="modal-error" role="alert"></div>
     <div class="modal-actions">
+
+
+      <span class="shortcut-hint">Cmd/Ctrl + Enter to run</span>
+
+
       <button class="btn-cancel" id="btn-cancel">Cancel</button>
       <button class="btn-submit" id="btn-submit">Run Task</button>
     </div>
@@ -795,23 +925,26 @@
 </div>
 
 <!-- Accounts Modal -->
-<div id="accounts-overlay">
-  <div id="accounts-modal">
-    <h2>Accounts</h2>
+<div id="accounts-overlay" aria-hidden="true">
+  <div id="accounts-modal" role="dialog" aria-modal="true" aria-labelledby="accounts-title" aria-describedby="accounts-help">
+    <h2 id="accounts-title">Accounts</h2>
     <div class="accounts-hint">
       Export cookies with <code>Cookie-Editor</code> or <code>EditThisCookie</code> browser extensions.
       Log in to the site first, then export as JSON and paste below.
       Vigil will inject these cookies before each task — your password is never shared with the AI.
     </div>
     <div>
-      <div class="detail-section-label" style="margin-bottom: 8px;">Saved Accounts</div>
+      <div class="detail-section-label">Saved Accounts</div>
       <div id="domain-list"></div>
     </div>
     <div id="accounts-add">
       <h3>Add Account</h3>
-      <input type="text" id="add-domain" placeholder="domain  (e.g. github.com)" autocomplete="off" />
-      <textarea id="add-cookies-json" placeholder='Paste cookie JSON array here…&#10;[{"name":"session","value":"abc123","domain":".github.com",...}]'></textarea>
-      <div id="accounts-add-status"></div>
+      <label class="sr-only" for="add-domain">Account domain</label>
+      <input type="text" id="add-domain" placeholder="domain  (e.g. github.com)" autocomplete="off" inputmode="url" />
+      <label class="sr-only" for="add-cookies-json">Cookie JSON array</label>
+      <textarea id="add-cookies-json" placeholder='Paste cookie JSON array here…&#10;[{"name":"session","value":"abc123","domain":".github.com",...}]' aria-describedby="accounts-help"></textarea>
+      <div id="accounts-help" class="sr-only">Cookies are stored locally by domain and injected before a task. Paste a JSON array exported from a cookie extension.</div>
+      <div id="accounts-add-status" role="status" aria-live="polite"></div>
       <div class="accounts-footer">
         <button class="btn-cancel" id="accounts-close">Close</button>
         <button class="btn-submit" id="btn-save-account">Save Account</button>
@@ -824,7 +957,7 @@
 <div id="detail-panel">
   <div id="detail-header">
     <span id="detail-title">Task Detail</span>
-    <button id="detail-close">✕</button>
+    <button id="detail-close" aria-label="Close task detail">✕</button>
   </div>
   <div id="detail-body">
     <div>
@@ -839,13 +972,9 @@
       <div class="detail-section-label">Live Browser</div>
       <div id="live-browser-wrap">
         <span id="manual-badge">MANUAL CONTROL</span>
-        <img id="live-screenshot"
-             src=""
-             alt="browser view"
-             style="width: 100%; display: none; object-fit: contain;"
-        />
-        <p id="no-screenshot" style="text-align: center; color: #444; font-size: 12px; padding: 40px;">
-          waiting for screenshot...
+        <img id="live-screenshot" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" alt="Live browser screenshot" />
+        <p id="no-screenshot">
+          Waiting for the browser screenshot. It will appear here once the task starts.
         </p>
       </div>
       <div id="manual-keyboard">
@@ -859,7 +988,7 @@
     </div>
     <div id="detail-report-wrap">
       <div id="detail-report-header">
-        <div class="detail-section-label" style="margin-bottom:0">Report</div>
+        <div class="detail-section-label">Report</div>
         <button id="btn-copy-report">Copy</button>
       </div>
       <div id="detail-report"></div>
@@ -881,6 +1010,11 @@ const socket = io();
 const taskMap = {};
 let activeTaskId = null;
 let elapsedTimers = {};
+let createPending = false;
+let activeDialog = null;
+let activeDialogOpener = null;
+
+const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 // ── Socket events ──────────────────────────────────────────
 socket.on('connect', () => {
@@ -899,10 +1033,13 @@ socket.on('task_update', (task) => {
 });
 
 socket.on('create_task_error', (data) => {
+  setSubmitPending(false);
   showModalError(data.error || 'Could not create task.');
 });
 
 socket.on('task_created', () => {
+  setSubmitPending(false);
+  announce('Task created and added to the queue.');
   closeModal();
 });
 
@@ -949,8 +1086,15 @@ function buildCard(task) {
   const div = document.createElement('div');
   div.className = 'card';
   div.id = 'card-' + task.id;
+  configureCardA11y(div, task);
   div.innerHTML = cardHTML(task);
   div.addEventListener('click', () => openDetail(task.id));
+  div.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openDetail(task.id);
+    }
+  });
 
   // Attach Take the Wheel button handler without propagating to card click
   const twBtn = div.querySelector('.btn-take-wheel');
@@ -968,6 +1112,7 @@ function buildCard(task) {
 function updateCard(card, task) {
   card.innerHTML = cardHTML(task);
   card.onclick = () => openDetail(task.id);
+  configureCardA11y(card, task);
 
   const twBtn = card.querySelector('.btn-take-wheel');
   if (twBtn) {
@@ -980,6 +1125,18 @@ function updateCard(card, task) {
   setupDrag(card, task);
   if (task.status === 'running' || task.status === 'paused') startTimer(task.id);
   else stopTimer(task.id);
+}
+
+function configureCardA11y(card, task) {
+  if (task.status === 'running') {
+    card.tabIndex = 0;
+    card.setAttribute('role', 'group');
+    card.setAttribute('aria-label', `Running task: ${task.description}`);
+  } else {
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', `Open ${task.status} task: ${task.description}`);
+  }
 }
 
 function cardHTML(task) {
@@ -998,7 +1155,8 @@ function cardHTML(task) {
 
   return `
     <div class="card-top">
-      <span class="status-dot dot-${task.status}"></span>
+      <span class="status-dot dot-${task.status}" aria-hidden="true"></span>
+      <span class="sr-only">${task.status} task</span>
       <span class="card-desc">${escHtml(task.description)}</span>
       ${takeWheelBtn}
     </div>
@@ -1040,6 +1198,13 @@ function stopTimer(id) {
 
 // ── Column counts ──────────────────────────────────────────
 function updateCounts() {
+  const emptyCopy = {
+    queue: ['Ready for work', 'Create a task with N, or use New Task.'],
+    running: ['Nothing running', 'Queued work starts here when capacity is free.'],
+    paused: ['No handoffs', 'Tasks needing human control will wait here.'],
+    done: ['No reports yet', 'Completed task reports will appear here.'],
+    failed: ['No failures', 'Drag failed cards to Queue or open one to retry.'],
+  };
   ['queue', 'running', 'paused', 'done', 'failed'].forEach(s => {
     const count = Object.values(taskMap).filter(t => t.status === s).length;
     const countEl = document.getElementById('count-' + s);
@@ -1051,7 +1216,7 @@ function updateCounts() {
     if (cards.length === 0 && !body.querySelector('.empty-col')) {
       const e = document.createElement('div');
       e.className = 'empty-col';
-      e.textContent = 'empty';
+      e.innerHTML = `<strong>${emptyCopy[s][0]}</strong>${emptyCopy[s][1]}`;
       body.appendChild(e);
     } else if (cards.length > 0) {
       const e = body.querySelector('.empty-col');
@@ -1188,7 +1353,10 @@ function renderDetail(task) {
   // Error
   const errEl = document.getElementById('detail-error');
   if (task.error) {
-    errEl.textContent = '⚠ ' + task.error;
+    errEl.innerHTML = `
+      <strong>Task failed</strong>
+      <p>${escHtml(task.error)} Retry the task, or take the wheel on the next run if login, 2FA, or a confirmation blocks automation.</p>
+    `;
     errEl.style.display = 'block';
   } else {
     errEl.style.display = 'none';
@@ -1208,7 +1376,12 @@ function renderDetail(task) {
 document.getElementById('detail-close').addEventListener('click', closeDetail);
 
 document.getElementById('btn-stop').addEventListener('click', () => {
-  if (activeTaskId) socket.emit('stop_task', { id: activeTaskId });
+  if (!activeTaskId) return;
+  const task = taskMap[activeTaskId];
+  const label = task ? `task #${task.id}` : 'this task';
+  if (!window.confirm(`Stop ${label}? The browser session will end and the task will move to Failed.`)) return;
+  socket.emit('stop_task', { id: activeTaskId });
+  announce(`${label} stopped.`);
 });
 
 document.getElementById('btn-take-wheel-detail').addEventListener('click', () => {
@@ -1308,25 +1481,34 @@ const accountsOverlay = document.getElementById('accounts-overlay');
 
 function openAccounts() {
   loadDomainList();
-  accountsOverlay.classList.add('open');
+  openDialog(accountsOverlay, document.getElementById('accounts-modal'));
 }
 
 function closeAccounts() {
-  accountsOverlay.classList.remove('open');
+  closeDialog(accountsOverlay);
   document.getElementById('add-domain').value = '';
   document.getElementById('add-cookies-json').value = '';
+  document.getElementById('add-domain').removeAttribute('aria-invalid');
+  document.getElementById('add-cookies-json').removeAttribute('aria-invalid');
   document.getElementById('accounts-add-status').textContent = '';
   document.getElementById('accounts-add-status').className = '';
 }
 
 async function loadDomainList() {
-  const res = await fetch('/cookies');
-  const data = await res.json();
   const list = document.getElementById('domain-list');
   list.innerHTML = '';
+  let data;
+  try {
+    const res = await fetch('/cookies');
+    data = await res.json();
+  } catch (e) {
+    list.innerHTML = '<div class="no-domains">Could not load saved accounts. Check the server connection and reopen Accounts.</div>';
+    announce('Could not load saved accounts.');
+    return;
+  }
 
   if (!data.domains || data.domains.length === 0) {
-    list.innerHTML = '<div class="no-domains">No accounts saved yet.</div>';
+    list.innerHTML = '<div class="no-domains">No accounts saved yet. Add a domain and paste exported cookie JSON below.</div>';
     populateCookieDomainSelect([]);
     return;
   }
@@ -1336,10 +1518,12 @@ async function loadDomainList() {
     row.className = 'domain-row';
     row.innerHTML = `
       <span>${escHtml(domain)}</span>
-      <button class="btn-delete-domain" data-domain="${escHtml(domain)}" title="Remove">✕</button>
+      <button class="btn-delete-domain" data-domain="${escHtml(domain)}" aria-label="Remove saved account for ${escHtml(domain)}" title="Remove">✕</button>
     `;
     row.querySelector('.btn-delete-domain').addEventListener('click', async () => {
+      if (!window.confirm(`Remove saved cookies for ${domain}? Tasks will no longer start signed in for this domain.`)) return;
       await fetch('/cookies/' + encodeURIComponent(domain), { method: 'DELETE' });
+      announce(`Removed saved account for ${domain}.`);
       loadDomainList();
     });
     list.appendChild(row);
@@ -1369,26 +1553,51 @@ document.getElementById('btn-save-account').addEventListener('click', async () =
   const domain = document.getElementById('add-domain').value.trim();
   const raw = document.getElementById('add-cookies-json').value.trim();
   const status = document.getElementById('accounts-add-status');
+  const domainInput = document.getElementById('add-domain');
+  const cookiesInput = document.getElementById('add-cookies-json');
+  domainInput.removeAttribute('aria-invalid');
+  cookiesInput.removeAttribute('aria-invalid');
 
-  if (!domain) { status.textContent = 'Domain is required.'; status.className = 'err'; return; }
-  if (!raw) { status.textContent = 'Cookie JSON is required.'; status.className = 'err'; return; }
+  if (!domain) {
+    domainInput.setAttribute('aria-invalid', 'true');
+    status.textContent = 'Domain is required.';
+    status.className = 'err';
+    return;
+  }
+  if (!raw) {
+    cookiesInput.setAttribute('aria-invalid', 'true');
+    status.textContent = 'Cookie JSON is required.';
+    status.className = 'err';
+    return;
+  }
 
   let parsed;
   try {
     parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) throw new Error('must be an array');
+    if (!parsed.every(cookie => cookie && typeof cookie === 'object' && 'name' in cookie && 'value' in cookie)) {
+      throw new Error('cookie objects need name and value');
+    }
   } catch (e) {
-    status.textContent = 'Invalid JSON — must be an array of cookie objects.';
+    cookiesInput.setAttribute('aria-invalid', 'true');
+    status.textContent = 'Invalid JSON — paste an array of cookie objects with name and value fields.';
     status.className = 'err';
     return;
   }
 
-  const res = await fetch('/cookies/' + encodeURIComponent(domain), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(parsed),
-  });
-  const data = await res.json();
+  let data;
+  try {
+    const res = await fetch('/cookies/' + encodeURIComponent(domain), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(parsed),
+    });
+    data = await res.json();
+  } catch (e) {
+    status.textContent = 'Could not save account. Check the server connection and try again.';
+    status.className = 'err';
+    return;
+  }
   if (data.ok) {
     status.textContent = `Saved ${data.count} cookie(s) for ${domain}.`;
     status.className = 'ok';
@@ -1448,14 +1657,17 @@ const overlay = document.getElementById('modal-overlay');
 function openModal() {
   document.getElementById('modal-model').value = sidebarModel.value;
   document.getElementById('task-input').value = '';
+  document.getElementById('task-input').removeAttribute('aria-invalid');
   clearModalError();
-  overlay.classList.add('open');
+  setSubmitPending(false);
+  openDialog(overlay, document.getElementById('modal'));
   setTimeout(() => document.getElementById('task-input').focus(), 50);
 }
 
 function closeModal() {
-  overlay.classList.remove('open');
+  closeDialog(overlay);
   clearModalError();
+  setSubmitPending(false);
 }
 
 document.getElementById('btn-new').addEventListener('click', openModal);
@@ -1469,16 +1681,28 @@ document.getElementById('task-input').addEventListener('keydown', e => {
 document.getElementById('btn-submit').addEventListener('click', submitTask);
 
 function submitTask() {
-  const task = document.getElementById('task-input').value.trim();
+  if (createPending) return;
+  const taskInput = document.getElementById('task-input');
+  const task = taskInput.value.trim();
+  taskInput.removeAttribute('aria-invalid');
   clearModalError();
   if (!task) {
-    showModalError('Task text is required.');
+    taskInput.setAttribute('aria-invalid', 'true');
+    showModalError('Task text is required. Describe what the browser should do before running.');
     return;
   }
   const model = document.getElementById('modal-model').value;
   const max_steps = parseInt(document.getElementById('modal-steps').value);
   const cookie_domain = document.getElementById('modal-cookie-domain').value || null;
+  setSubmitPending(true);
   socket.emit('create_task', { task, model, max_steps, cookie_domain });
+}
+
+function setSubmitPending(pending) {
+  createPending = pending;
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = pending;
+  btn.textContent = pending ? 'Queueing...' : 'Run Task';
 }
 
 function showModalError(message) {
@@ -1496,9 +1720,9 @@ function clearModalError() {
 // ── Keyboard shortcuts ─────────────────────────────────────
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
-    closeModal();
-    closeDetail();
-    closeAccounts();
+    if (activeDialog === overlay) closeModal();
+    else if (activeDialog === accountsOverlay) closeAccounts();
+    else closeDetail();
   }
   if (e.key === 'n' && !e.metaKey && !e.ctrlKey &&
       e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
@@ -1507,6 +1731,49 @@ document.addEventListener('keydown', e => {
 });
 
 // ── Helpers ────────────────────────────────────────────────
+function openDialog(overlayEl, panelEl) {
+  activeDialogOpener = document.activeElement;
+  activeDialog = overlayEl;
+  overlayEl.classList.add('open');
+  overlayEl.setAttribute('aria-hidden', 'false');
+  panelEl.addEventListener('keydown', trapDialogFocus);
+}
+
+function closeDialog(overlayEl) {
+  if (!overlayEl.classList.contains('open')) return;
+  const panel = overlayEl.querySelector('[role="dialog"]');
+  if (panel) panel.removeEventListener('keydown', trapDialogFocus);
+  overlayEl.classList.remove('open');
+  overlayEl.setAttribute('aria-hidden', 'true');
+  if (activeDialog === overlayEl) activeDialog = null;
+  if (activeDialogOpener && typeof activeDialogOpener.focus === 'function') {
+    activeDialogOpener.focus();
+  }
+  activeDialogOpener = null;
+}
+
+function trapDialogFocus(e) {
+  if (e.key !== 'Tab') return;
+  const focusable = [...e.currentTarget.querySelectorAll(focusableSelector)]
+    .filter(el => !el.disabled && el.offsetParent !== null);
+  if (focusable.length === 0) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+}
+
+function announce(message) {
+  const live = document.getElementById('status-live');
+  live.textContent = '';
+  setTimeout(() => { live.textContent = message; }, 10);
+}
+
 function escHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
